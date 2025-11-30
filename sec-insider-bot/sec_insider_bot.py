@@ -1,310 +1,215 @@
 #aiwebarchitects
-import os
+import argparse
 import time
-import json
 import requests
 import feedparser
 from bs4 import BeautifulSoup
-from datetime import datetime
 import logging
-import argparse
+import sys
+from datetime import datetime
 
 # Configure Logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
 
+# Constants
+SEC_RSS_URL = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&CIK=&type=4&company=&dateb=&owner=only&start=0&count=40&output=atom"
+SEEN_ENTRIES = set()
+
 class InsiderTradingBot:
-    """
-    A bot that monitors SEC EDGAR RSS feeds for Form 4 filings,
-    parses the XML data to find Open Market Purchases (Code 'P'),
-    and sends alerts to Discord if the transaction value exceeds a threshold.
-    """
-
-    # SEC EDGAR RSS Feed for Form 4 (Insider trading)
-    SEC_RSS_URL = "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&CIK=&type=4&company=&dateb=&owner=only&start=0&count=40&output=atom"
-    
-    # File to store processed IDs to prevent duplicate alerts
-    HISTORY_FILE = "processed_filings.json"
-
-    def __init__(self, webhook_url, min_value=100000, user_agent="Individual investor@example.com"):
-        """
-        Initialize the bot.
-        :param webhook_url: Discord Webhook URL.
-        :param min_value: Minimum transaction value ($) to trigger an alert.
-        :param user_agent: Required by SEC. Format: 'Name email@domain.com'
-        """
+    def __init__(self, user_agent, webhook_url=None, threshold=10000, interval=60):
+        self.headers = {'User-Agent': user_agent, 'Accept-Encoding': 'gzip, deflate'}
         self.webhook_url = webhook_url
-        self.min_value = min_value
-        self.headers = {
-            "User-Agent": user_agent,
-            "Accept-Encoding": "gzip, deflate",
-            "Host": "www.sec.gov"
-        }
-        self.processed_ids = self._load_history()
-
-    def _load_history(self):
-        """Load processed filing IDs from disk."""
-        if os.path.exists(self.HISTORY_FILE):
-            try:
-                with open(self.HISTORY_FILE, 'r') as f:
-                    return set(json.load(f))
-            except json.JSONDecodeError:
-                return set()
-        return set()
-
-    def _save_history(self):
-        """Save processed filing IDs to disk."""
-        # Keep history small (last 1000) to prevent file bloat
-        if len(self.processed_ids) > 1000:
-            # Convert to list, slice, convert back to set
-            recent_ids = list(self.processed_ids)[-1000:]
-            self.processed_ids = set(recent_ids)
-            
-        with open(self.HISTORY_FILE, 'w') as f:
-            json.dump(list(self.processed_ids), f)
+        self.threshold = threshold
+        self.interval = interval
+        self.session = requests.Session()
+        self.session.headers.update(self.headers)
 
     def fetch_rss_feed(self):
-        """Fetch and parse the SEC RSS feed."""
+        """Fetches the latest Form 4 filings from SEC RSS feed."""
         try:
-            # feedparser handles the HTTP request, but we need custom headers for SEC
-            # So we fetch raw content first
-            response = requests.get(self.SEC_RSS_URL, headers=self.headers, timeout=10)
-            response.raise_for_status()
-            return feedparser.parse(response.content)
+            response = self.session.get(SEC_RSS_URL, timeout=10)
+            if response.status_code == 200:
+                return feedparser.parse(response.content)
+            else:
+                logger.error(f"Failed to fetch RSS feed: {response.status_code}")
+                return None
         except Exception as e:
             logger.error(f"Error fetching RSS feed: {e}")
             return None
 
-    def get_xml_url(self, link):
-        """
-        Convert the standard HTML index link to the raw XML link.
-        Standard Link: https://www.sec.gov/Archives/edgar/data/123/456/456-index.htm
-        Target Link:   https://www.sec.gov/Archives/edgar/data/123/456/primary_doc.xml
-        
-        Note: The filename isn't always primary_doc.xml, but usually the first xml in the directory.
-        For robustness, we will request the index page and scrape the XML link.
-        """
+    def get_xml_link(self, index_url):
+        """Scrapes the filing index page to find the primary XML document link."""
         try:
-            # Fetch the index page
-            resp = requests.get(link, headers=self.headers, timeout=10)
-            if resp.status_code != 200:
-                return None
+            response = self.session.get(index_url, timeout=10)
+            soup = BeautifulSoup(response.content, 'html.parser')
             
-            soup = BeautifulSoup(resp.content, 'html.parser')
-            
-            # Look for the document table
-            # We want the link where Type is '4' and Format is 'XML' usually
-            # Simplified logic: Find the first link ending in .xml inside the table
-            for a_tag in soup.find_all('a', href=True):
-                href = a_tag['href']
-                if href.endswith('.xml') and 'xslF345' not in href:
-                    # Construct full URL
-                    return "https://www.sec.gov" + href
+            # Look for the XML file in the document table
+            # Usually the first row with type '4' and format 'xml'
+            tables = soup.find_all('table', class_='tableFile')
+            for table in tables:
+                rows = table.find_all('tr')
+                for row in rows:
+                    cols = row.find_all('td')
+                    if len(cols) > 3:
+                        doc_type = cols[3].text.strip()
+                        doc_href = cols[2].find('a')['href']
+                        # We want the main XML document
+                        if doc_type == '4' and doc_href.endswith('.xml'):
+                            return f"https://www.sec.gov{doc_href}"
             return None
         except Exception as e:
-            logger.error(f"Error extracting XML URL from {link}: {e}")
+            logger.error(f"Error extracting XML link from {index_url}: {e}")
             return None
 
-    def parse_form_4(self, xml_url):
-        """
-        Download and parse the Form 4 XML to extract transaction data.
-        Returns a summary dictionary or None.
-        """
+    def parse_transaction_xml(self, xml_url):
+        """Parses the Form 4 XML to calculate total purchase value."""
         try:
-            resp = requests.get(xml_url, headers=self.headers, timeout=10)
-            if resp.status_code != 200:
-                return None
+            response = self.session.get(xml_url, timeout=10)
+            soup = BeautifulSoup(response.content, 'xml') # Using XML parser
 
-            soup = BeautifulSoup(resp.content, 'xml') # Use XML parser
-
-            # Extract Issuer and Owner
-            issuer_name = soup.find('issuerName').text if soup.find('issuerName') else "Unknown"
-            ticker = soup.find('issuerTradingSymbol').text if soup.find('issuerTradingSymbol') else "Unknown"
-            owner_name = soup.find('rptOwnerName').text if soup.find('rptOwnerName') else "Unknown"
-            is_officer = soup.find('isOfficer').text if soup.find('isOfficer') else "0"
+            issuer_name = soup.find('issuerName').text if soup.find('issuerName') else "Unknown Company"
+            ticker = soup.find('issuerTradingSymbol').text if soup.find('issuerTradingSymbol') else "UNKNOWN"
+            
+            reporting_owner = soup.find('rptOwnerName').text if soup.find('rptOwnerName') else "Unknown Owner"
             is_director = soup.find('isDirector').text if soup.find('isDirector') else "0"
+            is_officer = soup.find('isOfficer').text if soup.find('isOfficer') else "0"
             is_ten_percent = soup.find('isTenPercentOwner').text if soup.find('isTenPercentOwner') else "0"
 
-            title = []
-            if is_director == '1' or is_director == 'true': title.append("Director")
-            if is_officer == '1' or is_officer == 'true': 
-                officer_title = soup.find('officerTitle').text if soup.find('officerTitle') else "Officer"
-                title.append(officer_title)
-            if is_ten_percent == '1' or is_ten_percent == 'true': title.append("10% Owner")
-            
-            owner_title = ", ".join(title) if title else "Insider"
-
-            # Process Non-Derivative Transactions
             transactions = soup.find_all('nonDerivativeTransaction')
-            
-            total_buy_value = 0.0
-            total_shares = 0.0
-            avg_price = 0.0
+            total_purchase_value = 0.0
+            purchase_details = []
 
-            found_purchase = False
-
-            for trans in transactions:
-                # Check transaction code
-                trans_code = trans.find('transactionCode')
-                if not trans_code or trans_code.get('transactionCode') != 'P':
-                    continue # Skip if not 'P' (Open Market Purchase)
-
-                # Get shares and price
-                shares_tag = trans.find('transactionShares')
-                price_tag = trans.find('transactionPricePerShare')
+            for t in transactions:
+                # Check for Transaction Code 'P' (Purchase)
+                # 'A' is Grant (Award), 'S' is Sale. We want 'P'.
+                trans_code = t.find('transactionCode').text if t.find('transactionCode') else ''
                 
-                if shares_tag and price_tag:
+                if trans_code == 'P':
                     try:
-                        shares = float(shares_tag.find('value').text)
-                        price = float(price_tag.find('value').text)
-                        
-                        total_buy_value += (shares * price)
-                        total_shares += shares
-                        found_purchase = True
-                    except (ValueError, AttributeError):
+                        shares = float(t.find('transactionShares').find('value').text)
+                        price = float(t.find('transactionPricePerShare').find('value').text)
+                        value = shares * price
+                        total_purchase_value += value
+                        purchase_details.append(f"Bought {int(shares):,} @ ${price:.2f}")
+                    except (AttributeError, ValueError):
                         continue
 
-            if not found_purchase or total_buy_value < self.min_value:
-                return None
-
-            if total_shares > 0:
-                avg_price = total_buy_value / total_shares
-
             return {
-                "ticker": ticker,
-                "issuer": issuer_name,
-                "owner": owner_name,
-                "title": owner_title,
-                "total_value": total_buy_value,
-                "shares": total_shares,
-                "price": avg_price,
-                "url": xml_url
+                'issuer': issuer_name,
+                'ticker': ticker,
+                'owner': reporting_owner,
+                'total_value': total_purchase_value,
+                'details': purchase_details,
+                'roles': {
+                    'Director': is_director,
+                    'Officer': is_officer,
+                    '10% Owner': is_ten_percent
+                }
             }
 
         except Exception as e:
             logger.error(f"Error parsing XML {xml_url}: {e}")
             return None
 
-    def send_discord_alert(self, data):
-        """Send a formatted embed to Discord."""
-        if not self.webhook_url:
-            logger.warning("No Webhook URL provided. Skipping alert.")
-            return
+    def send_alert(self, data, link):
+        """Sends notification to console and optional Webhook."""
+        title = f"🚨 INSIDER BUY: {data['ticker']} - ${data['total_value']:,.2f}"
+        roles = [k for k, v in data['roles'].items() if v == '1' or v == 'true' or v == True]
+        role_str = ", ".join(roles) if roles else "Insider"
+        
+        msg = (
+            f"{title}\n"
+            f"👤 {data['owner']} ({role_str})\n"
+            f"🏢 {data['issuer']}\n"
+            f"💰 Total: ${data['total_value']:,.2f}\n"
+            f"📝 Details: {', '.join(data['details'])}\n"
+            f"🔗 Link: {link}"
+        )
 
-        formatted_value = "${:,.2f}".format(data['total_value'])
-        formatted_price = "${:,.2f}".format(data['price'])
-        formatted_shares = "{:,.0f}".format(data['shares'])
+        logger.info("\n" + "="*50 + "\n" + msg + "\n" + "="*50)
 
-        embed = {
-            "title": f"🚨 Insider Buy Alert: {data['ticker']}",
-            "description": f"**{data['owner']}** ({data['title']}) just bought shares.",
-            "url": data['url'],
-            "color": 5763719, # Green-ish
-            "fields": [
-                {
-                    "name": "Total Value",
-                    "value": formatted_value,
-                    "inline": True
-                },
-                {
-                    "name": "Shares Bought",
-                    "value": formatted_shares,
-                    "inline": True
-                },
-                {
-                    "name": "Avg Price",
-                    "value": formatted_price,
-                    "inline": True
-                },
-                {
-                    "name": "Company",
-                    "value": data['issuer'],
-                    "inline": False
-                }
-            ],
-            "footer": {
-                "text": "SEC Form 4 Real-Time Monitor"
-            },
-            "timestamp": datetime.utcnow().isoformat()
-        }
-
-        payload = {
-            "embeds": [embed]
-        }
-
-        try:
-            resp = requests.post(self.webhook_url, json=payload)
-            if resp.status_code in [200, 204]:
-                logger.info(f"Alert sent for {data['ticker']}")
-            else:
-                logger.error(f"Failed to send Discord alert: {resp.status_code} {resp.text}")
-        except Exception as e:
-            logger.error(f"Error sending alert: {e}")
+        if self.webhook_url:
+            payload = {
+                "content": f"**{title}**\n> {msg}"
+            }
+            try:
+                requests.post(self.webhook_url, json=payload)
+            except Exception as e:
+                logger.error(f"Failed to send webhook: {e}")
 
     def run(self):
-        """Main polling loop."""
-        logger.info(f"Starting Insider Trading Bot. Threshold: ${self.min_value:,.2f}")
+        logger.info(f"Starting SEC Insider Trading Bot.")
+        logger.info(f"Tracking Form 4 Purchases > ${self.threshold:,.2f}")
         logger.info("Press Ctrl+C to stop.")
-        
+
         while True:
             feed = self.fetch_rss_feed()
             if feed:
-                # RSS entries are usually ordered newest first. 
-                # We reverse to process oldest to newest in this batch if multiple arrived.
-                for entry in reversed(feed.entries):
-                    # Create a unique ID for this filing based on the link or ID provided by RSS
-                    filing_id = entry.id if 'id' in entry else entry.link
+                # Process entries (newest first)
+                for entry in feed.entries:
+                    entry_id = entry.id
                     
-                    if filing_id in self.processed_ids:
+                    # Skip if already seen
+                    if entry_id in SEEN_ENTRIES:
+                        continue
+                    
+                    SEEN_ENTRIES.add(entry_id)
+                    
+                    # Only process recently seen entries to avoid flood on startup
+                    # (In a real DB implementation, we would check against DB timestamp)
+                    
+                    # Extract URL to the filing index
+                    filing_href = entry.link
+                    
+                    # 1. Get XML Link
+                    xml_link = self.get_xml_link(filing_href)
+                    if not xml_link:
                         continue
 
-                    logger.info(f"Processing new filing: {entry.title}")
+                    # 2. Parse XML for 'P' codes
+                    data = self.parse_transaction_xml(xml_link)
                     
-                    # Get the HTML link to the filing index
-                    link = entry.link
+                    # 3. Check Threshold and Alert
+                    if data and data['total_value'] >= self.threshold:
+                        self.send_alert(data, filing_href)
                     
-                    # Resolve to XML
-                    xml_url = self.get_xml_url(link)
-                    
-                    if xml_url:
-                        # Parse
-                        data = self.parse_form_4(xml_url)
-                        if data:
-                            self.send_discord_alert(data)
-                        else:
-                            logger.info("Filing processed: No significant purchase found.")
-                    else:
-                        logger.warning(f"Could not find XML URL for {link}")
-
-                    # Mark as processed regardless of result to avoid infinite loops
-                    self.processed_ids.add(filing_id)
-                    self._save_history()
-                    
-                    # Be polite to SEC servers (max 10 req/sec allowed, we go much slower)
+                    # Respect SEC rate limits (ensure we don't hit 10 req/sec)
                     time.sleep(0.2)
+            
+            # Clean up SEEN_ENTRIES if it gets too big (simple memory management)
+            if len(SEEN_ENTRIES) > 10000:
+                SEEN_ENTRIES.clear()
 
-            # Wait before checking RSS again. SEC filings don't happen every second.
-            # 60 seconds is a reasonable poll interval.
-            time.sleep(60)
+            logger.info(f"Sleeping for {self.interval} seconds...")
+            time.sleep(self.interval)
 
 if __name__ == "__main__":
-    # Simple Argument Parsing
-    parser = argparse.ArgumentParser(description='SEC Form 4 Insider Trading Bot')
-    parser.add_argument('--webhook', type=str, required=True, help='Discord Webhook URL')
-    parser.add_argument('--threshold', type=int, default=100000, help='Minimum USD value to alert (default: 100k)')
-    parser.add_argument('--user-agent', type=str, required=True, help='User-Agent string (Name email@domain.com)')
+    parser = argparse.ArgumentParser(description="Real-Time SEC Insider Trading Alert System")
     
+    # REQUIRED: SEC requires a User-Agent with contact info (e.g., email)
+    parser.add_argument("--email", required=True, help="Your email address for SEC User-Agent compliance (REQUIRED)")
+    
+    parser.add_argument("--webhook", help="Discord/Slack Webhook URL for alerts")
+    parser.add_argument("--threshold", type=float, default=10000.0, help="Minimum purchase value to trigger alert (default: 10000)")
+    parser.add_argument("--interval", type=int, default=60, help="Seconds between RSS checks (default: 60)")
+
     args = parser.parse_args()
 
+    # Construct compliant user agent: "AppName/Version (Email)"
+    user_agent = f"InsiderBot/1.0 ({args.email})"
+
     bot = InsiderTradingBot(
-        webhook_url=args.webhook, 
-        min_value=args.threshold,
-        user_agent=args.user_agent
+        user_agent=user_agent,
+        webhook_url=args.webhook,
+        threshold=args.threshold,
+        interval=args.interval
     )
-    
+
     try:
         bot.run()
     except KeyboardInterrupt:

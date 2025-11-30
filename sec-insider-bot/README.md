@@ -1,69 +1,59 @@
-# Real-Time Insider Trading Alert Bot
+# Real-Time Insider Trading Alert System
 
-An automated tool designed to monitor the SEC EDGAR database for Form 4 filings (Statement of Changes in Beneficial Ownership). It filters for open market purchases (Transaction Code 'P') and sends real-time alerts to Discord when high-value insider buying occurs.
+This tool automates the monitoring of SEC Form 4 filings to detect significant open-market stock purchases by company insiders (CEOs, CFOs, Directors). It parses complex government XML data in real-time and filters for "Purchase" transaction codes, alerting you only when high-value trades occur.
 
 ## Problem Description
-
-Traders and analysts often look for "insider buying" as a strong signal of confidence in a company's future. However, the SEC receives thousands of filings daily. Manually refreshing the SEC website, parsing complex XML documents, and filtering out noise (like stock grants, options exercises, or small purchases) is time-consuming and error-prone. Traders need a system that pushes only the most significant signals directly to them immediately after filing.
+Traders often look for "Insider Buys" as a strong bullish signal. However, manually refreshing the SEC EDGAR database is inefficient. By the time a filing is noticed on news sites, the price may have already moved. This bot provides a programmatic edge by scraping the raw data immediately upon publication.
 
 ## Solution Overview
-
-This Python-based bot:
-1.  **Polls** the SEC EDGAR RSS feed every 60 seconds for new Form 4 filings.
-2.  **Extracts** the raw XML document link from the filing index page.
-3.  **Parses** the XML to identify specific transaction codes ('P' - Open Market Purchase).
-4.  **Aggregates** the total value of shares bought in the filing.
-5.  **Filters** out transactions below a user-defined monetary threshold (e.g., $100,000).
-6.  **Alerts** a Discord channel via Webhook with a rich embed containing the Ticker, Insider Name, Role, Total Value, and Price.
+1. **Polling**: Monitors the SEC EDGAR RSS feed for new `Form 4` (Statement of Changes in Beneficial Ownership) filings.
+2. **Parsing**: Fetches the raw XML document associated with the filing.
+3. **Filtering**: specifically looks for Transaction Code `P` (Open Market Purchase). It ignores Grants (`A`) and Sales (`S`).
+4. **Alerting**: Calculates the total value of the purchase. If it exceeds your defined threshold, it prints to the console and optionally sends a notification to a Discord/Slack webhook.
 
 ## Prerequisites
-
-*   Python 3.8+
-*   A Discord Server (to create a Webhook URL)
-*   Internet connection
+- Python 3.8+
+- Internet connection
 
 ## Installation
 
-1.  **Unzip the package**:
-    ```bash
-    unzip sec-insider-bot.zip
-    cd sec-insider-bot
-    ```
+1. Unzip the tool:
+   ```bash
+   unzip sec-insider-bot.zip
+   cd sec-insider-bot
+   ```
 
-2.  **Install Dependencies**:
-    ```bash
-    pip install -r requirements.txt
-    ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
 ## Usage
 
-To run the bot, you must provide your Discord Webhook URL and a User-Agent string. 
+The SEC requires a valid User-Agent string containing contact information (like an email address) to identify the scraper. **You must provide an email address.**
 
-**Note on User-Agent:** The SEC strictly requires a User-Agent in the format: `"Name email@domain.com"` (e.g., `"John Doe john@example.com"`). Requests without this specific format may be blocked.
-
-### Basic Command
-
+### Basic Run (Console Alerts Only)
 ```bash
-python sec_insider_bot.py --webhook "YOUR_DISCORD_WEBHOOK_URL" --user-agent "YourName your@email.com"
+python sec_insider_bot.py --email "yourname@example.com"
 ```
 
-### Custom Threshold
-
-By default, the bot alerts on purchases over $100,000. To change this to $50,000:
-
-```bash
-python sec_insider_bot.py --webhook "..." --user-agent "..." --threshold 50000
-```
-
-### Running in Background (Linux/Mac)
+### With Discord Webhook & Custom Threshold
+To receive alerts in a Discord channel, create a Webhook in your Discord Server settings and paste the URL here.
 
 ```bash
-nohup python sec_insider_bot.py --webhook "..." --user-agent "..." & 
+python sec_insider_bot.py --email "yourname@example.com" --webhook "https://discord.com/api/webhooks/xyz..." --threshold 50000
 ```
+
+### Arguments
+- `--email` (Required): Your email address for SEC compliance.
+- `--webhook`: URL for Discord/Slack webhook notifications.
+- `--threshold`: Minimum total purchase value ($) to trigger an alert. Default: $10,000.
+- `--interval`: Seconds to wait between checking for new filings. Default: 60.
+
+## Configuration
+No config file is needed; all settings are passed via command-line arguments.
 
 ## Recommendations
-
-1.  **Rate Limiting**: The code includes delays to respect SEC rate limits (max 10 requests/sec). Do not remove the `time.sleep` calls.
-2.  **Deployment**: For 24/7 uptime, deploy this script on a VPS (e.g., AWS EC2, DigitalOcean Droplet) or a container service (Docker).
-3.  **Logging**: The bot logs to the console (Standard Output). Redirect this to a file if you need long-term debugging history.
-4.  **Persistence**: The bot creates a `processed_filings.json` file to track history. If you delete this file, the bot may re-alert on the last 40 filings upon restart.
+- **Rate Limiting**: The bot includes sleep timers to respect SEC rate limits (max 10 requests/sec). Do not remove these sleeps, or your IP will be banned by the SEC.
+- **Threshold**: Set a reasonable threshold (e.g., $10k or $50k) to avoid noise from small token purchases.
+- **Deployment**: For 24/7 monitoring, run this script on a VPS (AWS EC2, DigitalOcean) using `screen` or `systemd`.
