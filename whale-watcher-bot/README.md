@@ -1,59 +1,57 @@
-# Real-Time Whale Watcher Bot
+# Whale Watcher Bot
+
+An automated Python script to monitor specific Ethereum wallets for activity. It polls the blockchain via Etherscan and sends formatted alerts to a Discord channel via Webhooks.
 
 ## Problem Description
-Blockchain users often miss critical market movements because they cannot monitor specific addresses 24/7. Manually refreshing block explorers is inefficient, and raw blockchain data (integers in Wei) is difficult to read quickly. Users need an automated way to track "Whale" wallets and get instant notifications on their preferred communication platforms.
+Users often need to track specific "Whale" wallets or their own cold storage for security and analysis. Manually refreshing block explorers is inefficient. This tool provides an automated, always-on solution that handles API rate limits and data decoding automatically.
 
 ## Solution Overview
-This Python automation script monitors an Ethereum address for new transactions using the Etherscan API. When a new transaction occurs:
-1. It filters duplicates to ensure you only get notified once.
-2. It converts raw blockchain values (Wei) into human-readable Ether.
-3. It checks if the transaction value exceeds your defined threshold.
-4. It sends a rich-text alert to a Discord channel via Webhooks.
+- **Language:** Python 3
+- **Data Source:** Etherscan API (Free Tier compatible)
+- **Alerting:** Discord Webhooks (Push notifications)
+- **Features:**
+  - Monitors ETH transactions (Incoming/Outgoing).
+  - Converts Wei to ETH automatically.
+  - Filters small transactions via a threshold argument.
+  - Respects API rate limits to prevent bans.
+  - Robust error handling for network glitches.
 
 ## Prerequisites
-1. **Python 3.8+** installed.
-2. **Etherscan API Key**: 
-   - Sign up at [Etherscan.io](https://etherscan.io/apis).
-   - Create a free API key.
-3. **Discord Webhook URL**:
-   - Go to your Discord Server settings -> Integrations -> Webhooks.
+
+1. **Python 3.8+** installed on your machine.
+2. **Etherscan API Key**:
+   - Sign up at [Etherscan.io](https://etherscan.io/register).
+   - Create a free API key in your profile settings.
+3. **Discord Webhook**:
+   - Go to Server Settings -> Integrations -> Webhooks.
    - Create a new webhook and copy the URL.
 
 ## Installation
 
-1. Unzip the tool folder.
-2. Open a terminal/command prompt in the folder.
-3. Install the required dependencies:
+1. Download the source code.
+2. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
 ## Usage
 
-Run the script from the command line by passing the required arguments.
+Run the script from the command line using arguments:
 
-### Basic Command
 ```bash
-python whale_watcher.py --address 0xYourTargetAddress --api-key YourEtherscanKey --webhook YourDiscordWebhookUrl
+python whale_watcher.py --address <WALLET_ADDRESS> --apikey <ETHERSCAN_API_KEY> --webhook <DISCORD_WEBHOOK_URL>
 ```
 
-### Advanced Command (Custom Threshold & Interval)
-To alert only on transactions larger than 5 ETH, checking every 30 seconds:
-```bash
-python whale_watcher.py --address 0xTargetAddress --api-key YourKey --webhook YourUrl --threshold 5.0 --interval 30
-```
+### Optional Arguments
+- `--threshold`: Minimum amount of ETH to trigger an alert (e.g., `0.5`). Default is 0.
+- `--interval`: How often to check in seconds. Default is 60 (Recommended for free API tiers).
 
-### Arguments
-- `--address`: (Required) The Ethereum public address to watch.
-- `--api-key`: (Required) Your Etherscan API key.
-- `--webhook`: (Required) Your Discord Webhook URL.
-- `--threshold`: (Optional) Minimum amount of ETH to trigger an alert (default: 0.1).
-- `--interval`: (Optional) How often to check for new transactions in seconds (default: 60).
+### Example Command
+```bash
+python whale_watcher.py --address 0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae --apikey ABC123XYZ --webhook https://discord.com/api/webhooks/... --threshold 1.0
+```
 
 ## Configuration & Recommendations
-- **Rate Limits**: The free Etherscan API tier allows 5 calls per second. The default interval of 60 seconds is very safe. Do not lower the interval below 5 seconds.
-- **Thresholds**: Set the threshold appropriately for the address you are watching. If watching an exchange wallet, set it high (e.g., 100 ETH) to avoid spam.
-
-## Troubleshooting
-- **403/401 Errors**: Check that your API key is correct.
-- **No Alerts**: Ensure the address actually has *new* transactions occurring. The bot establishes a baseline on startup and only alerts on *future* transactions.
+- **Rate Limits**: The free Etherscan API allows 5 calls per second. The default interval of 60 seconds is very safe. Do not lower below 5 seconds.
+- **Hosting**: To keep this running 24/7, consider deploying it on a Raspberry Pi, a cheap VPS (DigitalOcean/Linode), or a cloud function.
+- **Logs**: The script outputs logs to the console. You can redirect this to a file using `python whale_watcher.py ... > bot.log`.
