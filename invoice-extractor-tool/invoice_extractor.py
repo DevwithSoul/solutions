@@ -1,137 +1,153 @@
 #aiwebarchitects
 import os
 import re
-import csv
-import logging
+import argparse
+import pandas as pd
 import pdfplumber
-from typing import List, Dict, Optional
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 # ==========================================
-# CONFIGURATION
+# CONFIGURATION & PATTERNS
 # ==========================================
-INPUT_FOLDER = 'invoices'
-OUTPUT_FILE = 'extracted_data.csv'
-LOG_FILE = 'extraction.log'
-
-# Regex Patterns for extraction
-# These patterns assume standard formats like "Invoice #: 12345" or "Total: $500.00"
-# Modify these based on specific vendor layouts.
-PATTERNS = {
-    'invoice_number': r'Invoice\s*(?:Number|#)?[:\s]+([A-Za-z0-9\-]+)',
-    'date': r'Date[:\s]+(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})',
-    'total_amount': r'Total(?:\s+Amount)?[:\s]+\$?([\d,]+\.\d{2})'
+# These Regex patterns are designed for a generic invoice format.
+# In a production environment, these might need tuning for specific vendor layouts.
+REGEX_PATTERNS = {
+    "invoice_number": r"Invoice\s*(?:Number|#)?\s*[:.]?\s*([A-Za-z0-9-]+)",
+    "date": r"Date\s*[:.]?\s*(\d{4}-\d{2}-\d{2}|\d{1,2}/\d{1,2}/\d{2,4})",
+    "total_amount": r"Total\s*(?:Amount)?\s*[:.]?\s*\$?\s*([\d,]+\.\d{2})"
 }
 
-# ==========================================
-# LOGGING SETUP
-# ==========================================
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler(LOG_FILE),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
-
-class InvoiceExtractor:
+def generate_sample_pdf(folder_path):
     """
-    Handles the logic for opening PDF files, extracting text, 
-    and parsing specific data points based on regex patterns.
+    Generates a dummy PDF invoice for testing purposes.
+    This ensures the user can run the script immediately without having their own files ready.
     """
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    
+    filename = os.path.join(folder_path, "sample_invoice_001.pdf")
+    c = canvas.Canvas(filename, pagesize=letter)
+    
+    # Draw some text that mimics a standard invoice
+    c.drawString(100, 750, "ACME Corp Invoice")
+    c.drawString(100, 730, "123 Business Rd, Business City")
+    
+    c.drawString(100, 680, "Invoice Number: INV-2023-001")
+    c.drawString(100, 660, "Date: 2023-10-27")
+    
+    c.drawString(100, 600, "Description              Amount")
+    c.drawString(100, 580, "--------------------------------")
+    c.drawString(100, 560, "Web Development          $500.00")
+    c.drawString(100, 540, "Hosting (1 Year)         $120.00")
+    
+    c.drawString(100, 500, "Total Amount: $620.00")
+    
+    c.save()
+    print(f"[INFO] Generated sample invoice at: {filename}")
 
-    def __init__(self, input_dir: str, output_path: str):
-        self.input_dir = input_dir
-        self.output_path = output_path
-        self._ensure_directories()
+def extract_data_from_pdf(pdf_path):
+    """
+    Opens a single PDF and attempts to extract fields based on REGEX_PATTERNS.
+    Returns a dictionary of extracted data.
+    """
+    data = {
+        "filename": os.path.basename(pdf_path),
+        "invoice_number": None,
+        "date": None,
+        "total_amount": None,
+        "status": "Success"
+    }
 
-    def _ensure_directories(self):
-        """Creates input directory if it doesn't exist to avoid errors."""
-        if not os.path.exists(self.input_dir):
-            os.makedirs(self.input_dir)
-            logger.info(f"Created input directory: {self.input_dir}")
-            logger.info("Please place PDF invoices in this folder and restart the script.")
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            # Usually invoices fit on the first page. 
+            # Iterate pages if necessary, but page 0 is standard for headers/totals.
+            if len(pdf.pages) > 0:
+                first_page = pdf.pages[0]
+                text_content = first_page.extract_text()
+                
+                if not text_content:
+                    data["status"] = "No Text Found (Scanned Image?)"
+                    return data
 
-    def extract_text_from_pdf(self, file_path: str) -> str:
-        """
-        Uses pdfplumber to extract text from the first page of a PDF.
-        Using pdfplumber is preferred over PyPDF2 for better layout preservation.
-        """
-        text = ""
-        try:
-            with pdfplumber.open(file_path) as pdf:
-                # Invoices usually have summary data on the first page
-                if len(pdf.pages) > 0:
-                    first_page = pdf.pages[0]
-                    text = first_page.extract_text()
-        except Exception as e:
-            logger.error(f"Failed to read PDF {file_path}: {e}")
-        return text
-
-    def parse_data(self, text: str) -> Dict[str, str]:
-        """
-        Applies regex patterns to the extracted raw text to find specific fields.
-        """
-        data = {}
-        for key, pattern in PATTERNS.items():
-            match = re.search(pattern, text, re.IGNORECASE)
-            if match:
-                # Group 1 contains the actual value, not the label
-                data[key] = match.group(1)
+                # Apply Regex Patterns
+                for key, pattern in REGEX_PATTERNS.items():
+                    match = re.search(pattern, text_content, re.IGNORECASE)
+                    if match:
+                        # Group 1 contains the actual value
+                        data[key] = match.group(1)
+                    else:
+                        data[key] = "Not Found"
             else:
-                data[key] = "N/A"
-        return data
+                data["status"] = "Empty PDF"
 
-    def run(self):
-        """
-        Main execution flow: Iterate files -> Extract -> Parse -> Save to CSV.
-        """
-        if not os.path.exists(self.input_dir) or not os.listdir(self.input_dir):
-            logger.warning(f"No files found in '{self.input_dir}'. Please add PDF files.")
-            return
-
-        results = []
-        files = [f for f in os.listdir(self.input_dir) if f.lower().endswith('.pdf')]
+    except Exception as e:
+        data["status"] = f"Error: {str(e)}"
         
-        logger.info(f"Found {len(files)} PDF files to process.")
+    return data
 
-        for filename in files:
-            file_path = os.path.join(self.input_dir, filename)
-            logger.info(f"Processing: {filename}")
-            
-            raw_text = self.extract_text_from_pdf(file_path)
-            if raw_text:
-                parsed_data = self.parse_data(raw_text)
-                parsed_data['filename'] = filename # Add filename for reference
-                results.append(parsed_data)
-            else:
-                logger.warning(f"No text extracted from {filename}. It might be an image-only PDF.")
+def process_directory(input_dir, output_file):
+    """
+    Iterates through all PDFs in the input directory, extracts data,
+    and saves the result to an Excel file.
+    """
+    if not os.path.exists(input_dir):
+        print(f"[ERROR] Input directory '{input_dir}' does not exist.")
+        return
 
-        self.save_to_csv(results)
+    pdf_files = [f for f in os.listdir(input_dir) if f.lower().endswith('.pdf')]
+    
+    if not pdf_files:
+        print(f"[WARN] No PDF files found in '{input_dir}'.")
+        return
 
-    def save_to_csv(self, data: List[Dict[str, str]]):
-        """
-        Writes the list of dictionaries to a CSV file.
-        """
-        if not data:
-            logger.info("No data to save.")
-            return
+    print(f"[INFO] Found {len(pdf_files)} PDF files. Processing...")
+    
+    extracted_results = []
 
-        # Get headers from the keys of the first dictionary
-        headers = ['filename'] + list(PATTERNS.keys())
+    for pdf_file in pdf_files:
+        full_path = os.path.join(input_dir, pdf_file)
+        print(f"Processing: {pdf_file}...")
+        result = extract_data_from_pdf(full_path)
+        extracted_results.append(result)
 
+    # Create DataFrame and Export
+    if extracted_results:
+        df = pd.DataFrame(extracted_results)
+        
+        # Reorder columns for readability
+        cols = ["filename", "invoice_number", "date", "total_amount", "status"]
+        df = df[cols]
+        
         try:
-            with open(self.output_path, mode='w', newline='', encoding='utf-8') as csvfile:
-                writer = csv.DictWriter(csvfile, fieldnames=headers)
-                writer.writeheader()
-                for row in data:
-                    writer.writerow(row)
-            logger.info(f"Successfully saved data to {self.output_path}")
-        except IOError as e:
-            logger.error(f"Could not write to CSV file: {e}")
+            df.to_excel(output_file, index=False)
+            print(f"\n[SUCCESS] Extraction complete! Data saved to: {output_file}")
+            print(df.head())
+        except Exception as e:
+            print(f"[ERROR] Could not write to Excel file: {e}")
+            print("Ensure the file is not open in another program.")
+    else:
+        print("[INFO] No data extracted.")
+
+def main():
+    parser = argparse.ArgumentParser(description="Automated PDF Invoice Data Extractor")
+    
+    parser.add_argument('--input', '-i', type=str, required=True, 
+                        help='Folder path containing PDF invoices')
+    parser.add_argument('--output', '-o', type=str, default='invoice_data.xlsx', 
+                        help='Output Excel filename (default: invoice_data.xlsx)')
+    parser.add_argument('--generate-sample', action='store_true', 
+                        help='Generate a sample invoice PDF in the input folder for testing')
+
+    args = parser.parse_args()
+
+    # 1. Generate sample if requested
+    if args.generate_sample:
+        generate_sample_pdf(args.input)
+
+    # 2. Process the directory
+    process_directory(args.input, args.output)
 
 if __name__ == "__main__":
-    # Entry point for the script
-    extractor = InvoiceExtractor(INPUT_FOLDER, OUTPUT_FILE)
-    extractor.run()
+    main()
