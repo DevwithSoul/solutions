@@ -29,30 +29,27 @@ fi
 echo -e "${GREEN}Current status:${NC}"
 git status --short
 
-# Add all changes in solutions directory
-echo -e "\n${GREEN}Adding changes...${NC}"
-# Detect if we're in solutions directory or project root
-CURRENT_DIR=$(basename "$PWD")
-if [ "$CURRENT_DIR" = "solutions" ]; then
-    git add .
+# Add only solution directories (exclude push scripts)
+echo -e "\n${GREEN}Adding solution directories...${NC}"
+
+# Find and add all directories in solutions/ (excluding hidden dirs)
+if [ -d "solutions" ]; then
+    for dir in solutions/*/; do
+        if [ -d "$dir" ]; then
+            git add "$dir"
+        fi
+    done
 else
-    git add solutions/
+    # We're already in solutions/
+    for dir in */; do
+        if [ -d "$dir" ]; then
+            git add "$dir"
+        fi
+    done
 fi
 
-# Check if there are other changes to add
-read -p "Add all other changes too? (y/n): " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
-    git add .
-fi
-
-# Get commit message
-echo -e "\n${GREEN}Enter commit message (or press Enter for default):${NC}"
-read -r COMMIT_MSG
-
-if [ -z "$COMMIT_MSG" ]; then
-    COMMIT_MSG="Update solutions - $(date '+%Y-%m-%d %H:%M:%S')"
-fi
+# Generate commit message
+COMMIT_MSG="Update solutions - $(date '+%Y-%m-%d %H:%M:%S')"
 
 # Commit changes
 echo -e "\n${GREEN}Committing changes...${NC}"

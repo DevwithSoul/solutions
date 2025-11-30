@@ -35,10 +35,10 @@ python3 solutions/push_to_github.py
 ## Features
 
 Both scripts provide:
+- ✓ Fully automated - no prompts
 - ✓ Automatic detection of changes
-- ✓ Interactive commit message input
-- ✓ Default timestamped commit messages
-- ✓ Option to add all changes or just solutions/
+- ✓ Timestamped commit messages
+- ✓ Adds all changes automatically
 - ✓ Automatic branch detection
 - ✓ Color-coded output
 - ✓ Error handling
@@ -47,15 +47,13 @@ Both scripts provide:
 
 1. Script checks if you're in a git repository
 2. Shows current git status
-3. Adds changes in `solutions/` directory
-4. Asks if you want to add other changes
-5. Prompts for commit message (or uses default)
-6. Commits changes
-7. Pushes to current branch on GitHub
+3. Adds all changes with `git add .`
+4. Commits with timestamped message
+5. Pushes to current branch on GitHub
 
-## Default Commit Message
+## Commit Message Format
 
-If no message is provided, uses:
+Automatically uses:
 ```
 Update solutions - YYYY-MM-DD HH:MM:SS
 ```

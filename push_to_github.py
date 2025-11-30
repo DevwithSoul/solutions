@@ -54,26 +54,18 @@ def main():
     print(f"\n{Colors.GREEN}Current status:{Colors.NC}")
     print(run_command("git status --short"))
     
-    # Add changes in solutions directory
-    print(f"\n{Colors.GREEN}Adding changes...{Colors.NC}")
-    # Detect if we're in solutions directory or project root
-    if Path.cwd().name == 'solutions':
-        run_command("git add .")
-    else:
-        run_command("git add solutions/")
+    # Add only solution directories (exclude push scripts)
+    print(f"\n{Colors.GREEN}Adding solution directories...{Colors.NC}")
     
-    # Ask about other changes
-    response = input("\nAdd all other changes too? (y/n): ").strip().lower()
-    if response == 'y':
-        run_command("git add .")
+    # Get all directories in solutions/
+    solutions_dir = Path('solutions') if Path('solutions').exists() else Path('.')
+    for item in solutions_dir.iterdir():
+        if item.is_dir() and not item.name.startswith('.'):
+            run_command(f"git add {item}")
     
-    # Get commit message
-    print(f"\n{Colors.GREEN}Enter commit message (or press Enter for default):{Colors.NC}")
-    commit_msg = input().strip()
-    
-    if not commit_msg:
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        commit_msg = f"Update solutions - {timestamp}"
+    # Generate commit message
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    commit_msg = f"Update solutions - {timestamp}"
     
     # Commit changes
     print(f"\n{Colors.GREEN}Committing changes...{Colors.NC}")
