@@ -68,6 +68,7 @@ class ChainAlertBot:
         self.chat_id = chat_id
         self.w3 = None
         self.factory_contract = None
+        self.last_block = None
 
     async def send_telegram_alert(self, message):
         """
@@ -162,7 +163,8 @@ class ChainAlertBot:
 
         # Create an event filter for the PairCreated event
         # We loop and poll the filter for changes. This is robust for most WSS implementations.
-        event_filter = await self.factory_contract.events.PairCreated.create_filter(from_block='latest')
+        from_block = self.last_block + 1 if self.last_block is not None else 'latest'
+        event_filter = await self.factory_contract.events.PairCreated.create_filter(from_block=from_block)
 
         while True:
             try:
@@ -171,6 +173,9 @@ class ChainAlertBot:
                 
                 for event in new_entries:
                     await self.handle_event(event)
+                    if hasattr(event, 'blockNumber') and event.blockNumber is not None:
+                        if self.last_block is None or event.blockNumber > self.last_block:
+                            self.last_block = event.blockNumber
                 
                 # Sleep to prevent spamming the node
                 await asyncio.sleep(2)
@@ -178,9 +183,9 @@ class ChainAlertBot:
             except Web3Exception as w3e:
                 logger.error(f"Web3 Connection Error: {w3e}. Reconnecting...")
                 await asyncio.sleep(5)
-                # Re-instantiate filter on error/reconnect logic would go here in a full prod app
-                # For simplicity, we restart the loop logic or exit to let supervisor restart
-                event_filter = await self.factory_contract.events.PairCreated.create_filter(from_block='latest')
+                # Re-instantiate filter on error using last known block to avoid missing events
+                from_block = self.last_block + 1 if self.last_block is not None else 'latest'
+                event_filter = await self.factory_contract.events.PairCreated.create_filter(from_block=from_block)
             except asyncio.CancelledError:
                 logger.info("Bot stopped by user.")
                 break

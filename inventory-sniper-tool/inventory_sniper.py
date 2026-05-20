@@ -2,6 +2,7 @@
 import argparse
 import time
 import sys
+import json
 import requests
 from datetime import datetime
 from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
@@ -42,7 +43,7 @@ def send_discord_notification(webhook_url, product_url, screenshot_path=None):
                     'file': (screenshot_path, f, 'image/png')
                 }
                 # Payload_json is required when sending files with JSON data
-                response = requests.post(webhook_url, data={'payload_json': str(data).replace("'", '"')}, files=files)
+                response = requests.post(webhook_url, data={'payload_json': json.dumps(data)}, files=files)
         except Exception as e:
             print(f"[!] Failed to upload screenshot: {e}")
             # Fallback to text only

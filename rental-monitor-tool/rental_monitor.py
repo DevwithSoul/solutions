@@ -35,6 +35,26 @@ CHECK_INTERVAL_MAX = 180  # Maximum seconds between checks (randomized to avoid 
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
 DB_FILE = "rental_history.db"
 
+# CLI args to override config
+import argparse
+_parser = argparse.ArgumentParser(description="Rental Listing Monitor")
+_parser.add_argument("--target-url", help="URL of the rental site to monitor")
+_parser.add_argument("--webhook-url", help="Discord webhook URL for alerts")
+_parser.add_argument("--min-interval", type=int, help="Min check interval in seconds")
+_parser.add_argument("--max-interval", type=int, help="Max check interval in seconds")
+_parser.add_argument("--db-file", help="SQLite database file path")
+_args, _ = _parser.parse_known_args()
+if _args.target_url:
+    TARGET_URL = _args.target_url
+if _args.webhook_url:
+    DISCORD_WEBHOOK_URL = _args.webhook_url
+if _args.min_interval:
+    CHECK_INTERVAL_MIN = _args.min_interval
+if _args.max_interval:
+    CHECK_INTERVAL_MAX = _args.max_interval
+if _args.db_file:
+    DB_FILE = _args.db_file
+
 # ==========================================
 # SETUP & LOGGING
 # ==========================================

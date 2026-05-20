@@ -67,9 +67,6 @@ def calculate_rebalancing(df, cash_injection=0.0):
     Performs the core rebalancing logic.
     """
     # 1. Calculate Current Market Value per position
-    df['CurrentPrice'] = df['Symbol'].map(lambda x: fetch_market_data([x])[x] if 'CurrentPrice' not in df else df.loc[df['Symbol']==x, 'CurrentPrice'])
-    
-    # Optimization: The lambda above is inefficient for many symbols, let's map the dict
     unique_symbols = df['Symbol'].unique().tolist()
     price_map = fetch_market_data(unique_symbols)
     df['CurrentPrice'] = df['Symbol'].map(price_map)

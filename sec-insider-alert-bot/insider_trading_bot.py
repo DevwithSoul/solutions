@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import json
 import sys
+import re
 
 # ==========================================
 # CONFIGURATION & CONSTANTS
@@ -89,9 +90,8 @@ class InsiderTradingBot:
             response = requests.get(xml_url, headers=self.headers)
             # Remove namespaces to make parsing easier with ElementTree
             xml_content = response.text
-            # Simple hack to strip namespaces for easier parsing
-            import re
-            xml_content = re.sub(r' xmlns="[^"]+"', '', xml_content, count=1)
+            # Strip all XML namespace declarations for easier parsing
+            xml_content = re.sub(r' xmlns[^=]*="[^"]*"', '', xml_content)
             
             root = ET.fromstring(xml_content)
             

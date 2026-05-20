@@ -4,6 +4,7 @@ import time
 import sys
 import logging
 import requests
+import re
 import feedparser
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -96,36 +97,50 @@ class SECInsiderMonitor:
                         # Extract Price and Amount
                         try:
                             # Attempt to find price and amount by looking for numbers
-                            # This is a simplification. A full parser maps XML tags.
-                            # We look for the price per share and number of shares.
                             
-                            # Filter for numeric values in the row
-                            numerics = []
-                            for text in row_text:
-                                clean_text = text.replace(',', '').replace('$', '')
+                            # Standard Form 4 Table I columns:
+                            # 1. Title, 2. Date, 3. Code, 4. Acq/Disp, 5. Amount, 6. Acq/Disp, 7. Price
+                            # Column 4 (index 4) is typically amount, column 6 (index 6) is typically price
+                            shares = None
+                            price = None
+                            total_value = None
+                            
+                            if len(cells) >= 7:
+                                # Try column 5 (index 4) for shares and column 7 (index 6) for price
                                 try:
-                                    val = float(clean_text)
-                                    numerics.append(val)
-                                except ValueError:
-                                    continue
+                                    shares = float(cells[4].get_text(strip=True).replace(',', ''))
+                                except (ValueError, IndexError):
+                                    pass
+                                try:
+                                    price = float(cells[6].get_text(strip=True).replace(',', '').replace('$', ''))
+                                except (ValueError, IndexError):
+                                    pass
                             
-                            # Heuristic: Usually [Date, ..., Amount, ..., Price, ...]
-                            # If we have at least 2 numbers, we assume Amount and Price.
-                            if len(numerics) >= 2:
-                                # Very basic heuristic: Price is usually smaller than Amount (shares)
-                                # unless it's BRK.A. 
-                                # Let's assume the larger number is shares, smaller is price (risky but works for 99%)
-                                # A better way is strictly by column index, but HTML varies wildly.
+                            # Fallback to heuristic numeric extraction
+                            if shares is None or price is None:
+                                numerics = []
+                                for text in row_text:
+                                    clean_text = text.replace(',', '').replace('$', '')
+                                    try:
+                                        val = float(clean_text)
+                                        numerics.append(val)
+                                    except ValueError:
+                                        continue
                                 
-                                # Let's try to be more specific with column indices if possible
-                                # Standard Form 4 Table 1:
-                                # 1. Title, 2. Date, 3. Code, 4. Acq/Disp, 5. Amount, 6. Acq/Disp, 7. Price
-                                
-                                # Using a simpler approach: Just capture that a purchase happened.
-                                transactions.append({
-                                    'type': 'Purchase',
-                                    'raw_row': row_text
-                                })
+                                if len(numerics) >= 2:
+                                    shares = max(numerics)
+                                    price = min(numerics)
+                            
+                            if shares is not None and price is not None:
+                                total_value = shares * price
+                            
+                            transactions.append({
+                                'type': 'Purchase',
+                                'shares': shares,
+                                'price': price,
+                                'total_value': total_value,
+                                'raw_row': row_text
+                            })
                         except Exception:
                             continue
 
@@ -134,16 +149,22 @@ class SECInsiderMonitor:
                 issuer = "Unknown"
                 ticker = "Unknown"
                 try:
-                    # Try to find the issuer info block
-                    info_text = doc_soup.get_text()
-                    # Very rough extraction, usually provided in the Atom feed title though.
-                    pass
+                    issuer_span = doc_soup.find('span', {'class': 'companyName'})
+                    if issuer_span:
+                        issuer_text = issuer_span.get_text(strip=True)
+                        ticker_match = re.search(r'\(([^)]+)\)\s*\(CIK', issuer_text)
+                        if ticker_match:
+                            ticker = ticker_match.group(1)
+                        issuer = issuer_text.split('(')[0].strip()
                 except:
                     pass
                 
                 return {
                     'count': len(transactions),
-                    'link': doc_link
+                    'link': doc_link,
+                    'issuer': issuer,
+                    'ticker': ticker,
+                    'transactions': transactions
                 }
 
             return None
@@ -155,13 +176,36 @@ class SECInsiderMonitor:
     def send_discord_alert(self, entry, details):
         """Sends a formatted embed to Discord."""
         title = entry.title
-        # title format is usually: "4 - Company Name (Ticker) (CIK)"
+        
+        tx_summary = ""
+        for i, tx in enumerate(details.get('transactions', []), 1):
+            if tx.get('shares') and tx.get('price'):
+                tx_summary += f"\n• {tx['shares']:.0f} shares @ ${tx['price']:.2f}"
+                if tx.get('total_value'):
+                    tx_summary += f" (${tx['total_value']:,.2f})"
+            else:
+                tx_summary += f"\n• Purchase detected (amount unknown)"
+        
+        issuer_info = details.get('issuer', 'Unknown')
+        ticker_info = details.get('ticker', '')
+        if ticker_info:
+            issuer_info = f"{issuer_info} ({ticker_info})"
         
         embed = {
             "title": "🚨 Insider Purchase Detected",
-            "description": f"**{title}**\n\nAn insider has filed a Form 4 indicating an open-market purchase (Transaction Code 'P').",
+            "description": f"**{issuer_info}**\n\nAn insider has filed a Form 4 indicating an open-market purchase.",
             "color": 5763719, # Green
             "fields": [
+                {
+                    "name": "Filing",
+                    "value": f"[{title}]({entry.link})",
+                    "inline": False
+                },
+                {
+                    "name": "Transaction Details",
+                    "value": tx_summary if tx_summary else "Purchase detected (see filing)",
+                    "inline": False
+                },
                 {
                     "name": "Filing Date",
                     "value": entry.updated,
@@ -173,8 +217,9 @@ class SECInsiderMonitor:
                     "inline": True
                 },
                 {
-                    "name": "Links",
-                    "value": f"[SEC Filing Index]({entry.link})\n[Direct Document]({details['link']})"
+                    "name": "Direct Link",
+                    "value": f"[View Form 4]({details['link']})",
+                    "inline": False
                 }
             ],
             "footer": {

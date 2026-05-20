@@ -84,13 +84,15 @@ def webhook():
     # 2. Parse Order Details
     try:
         symbol = data.get('symbol')
-        side = data.get('side').lower() # 'buy' or 'sell'
-        order_type = data.get('type', 'market').lower() # 'market' or 'limit'
-        amount = float(data.get('amount'))
-        price = data.get('price') # Can be None for market orders
+        side = (data.get('side') or '').lower()
+        order_type = (data.get('type') or 'market').lower()
+        raw_amount = data.get('amount')
 
-        if not symbol or not side or not amount:
+        if not symbol or not side or raw_amount is None:
             return jsonify({"status": "error", "message": "Missing required fields (symbol, side, amount)"}), 400
+
+        amount = float(raw_amount)
+        price = data.get('price')
 
         print(f"[SIGNAL RECEIVED] {side.upper()} {amount} {symbol} ({order_type})")
 

@@ -92,13 +92,13 @@ def calculate_rebalancing(portfolio, new_cash):
         buy_amount = 0.0
         
         if total_deficit > 0:
-            # Weight determines how much of the cash goes to this asset's deficit
-            weight = asset['deficit'] / total_deficit
-            
-            # If the needed amount is massive, we just give it the weighted share of available cash
-            # However, strictly filling deficits is usually prioritized.
-            # Simple approach: Weighted distribution of available cash based on need.
-            buy_amount = new_cash * weight
+            if new_cash <= total_deficit:
+                # Not enough cash to fill all deficits, distribute proportionally
+                weight = asset['deficit'] / total_deficit
+                buy_amount = new_cash * weight
+            else:
+                # Enough cash to fill deficits, distribute remainder by target %
+                buy_amount = asset['deficit'] + (new_cash - total_deficit) * asset['target_pct']
         else:
             # Edge case: All assets are exactly at or above target (unlikely with new cash)
             # Distribute based on target_pct to maintain ratios

@@ -42,7 +42,7 @@ class SPAWatcher:
                     "source": self.url,
                     "timestamp": datetime.now().isoformat()
                 }
-                await api_request_context.post(self.webhook_url, data=payload)
+                await api_request_context.post(self.webhook_url, json=payload)
                 self.log(f"Webhook sent to {self.webhook_url}")
             except Exception as e:
                 self.log(f"Failed to send webhook: {e}", "ERROR")

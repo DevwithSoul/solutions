@@ -50,10 +50,9 @@ class InfiniteScrollScraper:
                 logging.error(f"Failed to load page: {e}")
                 return []
 
-            items_collected = 0
             last_height = page.evaluate("document.body.scrollHeight")
             
-            while items_collected < max_items:
+            while True:
                 # 1. Extract currently visible items
                 # We re-query the DOM every iteration because new items are added and old refs might go stale
                 elements = page.query_selector_all(item_selector)

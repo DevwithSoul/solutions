@@ -61,7 +61,7 @@ class StockMonitor:
             
             if not element:
                 logger.warning(f"Element with selector '{self.selector}' not found on page.")
-                return False
+                return False, "ElementNotFound"
             
             element_text = element.get_text(strip=True).lower()
             logger.debug(f"Found text: '{element_text}'")
