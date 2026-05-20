@@ -1,0 +1,10 @@
+# No external dependencies required.
+# This script uses only Python standard library modules:
+#   - xml.etree.ElementTree (XML parsing)
+#   - urllib.request (HTTP requests)
+#   - csv (CSV output)
+#   - json (progress tracking)
+#   - argparse (CLI interface)
+#   - time, os, sys, pathlib, datetime (utilities)
+#
+# Python 3.7+ is sufficient.
