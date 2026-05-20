@@ -1,2 +1,8 @@
 __pycache__/
 *.pyc
+
+# Project files - not part of solutions
+README_PUSH.md
+push_to_github.py
+push_to_github.sh
+checks_*.md
