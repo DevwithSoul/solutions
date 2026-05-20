@@ -114,7 +114,7 @@ All 49 solutions have been syntax-checked, dependency-verified, and code-reviewe
 | ⚠️ Warnings | 0 |
 | ❌ Failed | 0 |
 
-See [`checks_05_2026.md`](checks_05_2026.md) for the full audit report.
+All 49 tools passed syntax checks, dependency resolution, and code review.
 
 ## Download & Test Your Solution
 
