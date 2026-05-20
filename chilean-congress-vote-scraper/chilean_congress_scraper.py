@@ -45,8 +45,7 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5.0  # seconds between retries
 
 NS = {
-    "soap": "http://schemas.xmlsoap.org/soap/envelope/",
-    "v1": "http://opendata.camara.cl/camaradiputados/v1",
+    "temp": "http://tempuri.org/",
 }
 
 # ---------------------------------------------------------------------------
@@ -77,7 +76,8 @@ def get_votaciones_for_bill(bill_number: str) -> list[dict]:
     """
     Fetch all vote IDs for a given bill number.
     API: getVotaciones_Boletin?prmBoletin={bill_number}
-    Returns list of {id, descripcion, fecha} dicts.
+    Returns list of vote dicts.
+    Note: API returns raw XML (no SOAP envelope) with namespace http://tempuri.org/
     """
     url = f"{BASE_URL}/getVotaciones_Boletin?prmBoletin={quote(bill_number)}"
     raw = fetch_xml(url)
@@ -85,27 +85,38 @@ def get_votaciones_for_bill(bill_number: str) -> list[dict]:
     votes = []
     try:
         root = ET.fromstring(raw)
-        # Navigate SOAP envelope → body → response → result
-        body = root.find(".//soap:Body", NS)
-        if body is None:
-            body = root  # fallback – sometimes no SOAP wrapper
-        result = body.find(".//getVotaciones_BoletinResult", NS)
-        if result is None:
-            result = body.find(".//{http://tempuri.org/}getVotaciones_BoletinResult")
+        # API returns <Votaciones xmlns="http://tempuri.org/"> with <Votacion> children
+        # No SOAP envelope – root is the response directly
+        for v in root.findall("temp:Votacion", NS):
+            vid = v.findtext("temp:ID", "", NS).strip()
+            fecha = v.findtext("temp:Fecha", "", NS).strip()
+            tipo = v.findtext("temp:Tipo", "", NS).strip()
+            resultado = v.findtext("temp:Resultado", "", NS).strip()
+            quorum = v.findtext("temp:Quorum", "", NS).strip()
+            articulo = v.findtext("temp:Articulo", "", NS).strip()
+            boletin = v.findtext("temp:Boletin", "", NS).strip()
+            tramite = v.findtext("temp:Tramite", "", NS).strip()
+            total_si = v.findtext("temp:TotalAfirmativos", "0", NS).strip()
+            total_no = v.findtext("temp:TotalNegativos", "0", NS).strip()
+            total_abs = v.findtext("temp:TotalAbstenciones", "0", NS).strip()
+            total_dis = v.findtext("temp:TotalDispensados", "0", NS).strip()
 
-        if result is not None:
-            votaciones = result.findall(".//VotacionProyectoLey")
-            for v in votaciones:
-                vid = v.findtext("Id", "").strip()
-                desc = v.findtext("Descripcion", "").strip()
-                fecha = v.findtext("Fecha", "").strip()
-                if vid:
-                    votes.append({
-                        "id": vid,
-                        "descripcion": desc,
-                        "fecha": fecha,
-                        "bill_number": bill_number,
-                    })
+            if vid:
+                votes.append({
+                    "id": vid,
+                    "fecha": fecha,
+                    "tipo": tipo,
+                    "resultado": resultado,
+                    "quorum": quorum,
+                    "articulo": articulo,
+                    "boletin": boletin if boletin else bill_number,
+                    "tramite": tramite,
+                    "bill_number": bill_number,
+                    "total_afirmativos": total_si,
+                    "total_negativos": total_no,
+                    "total_abstenciones": total_abs,
+                    "total_dispensados": total_dis,
+                })
     except ET.ParseError as e:
         print(f"  [ERROR] XML parse error for bill {bill_number}: {e}")
 
@@ -117,74 +128,67 @@ def get_votacion_detail(vote_id: str) -> dict | None:
     Fetch detailed voting record for a specific vote ID.
     API: getVotacion_Detalle?prmVotacionID={vote_id}
     Returns dict with vote metadata and list of individual deputy votes.
+    Note: API returns raw <Votacion xmlns="http://tempuri.org/"> directly (no SOAP)
     """
     url = f"{BASE_URL}/getVotacion_Detalle?prmVotacionID={quote(vote_id)}"
     raw = fetch_xml(url)
 
     try:
         root = ET.fromstring(raw)
-        body = root.find(".//soap:Body", NS)
-        if body is None:
-            body = root
-        result = body.find(".//getVotacion_DetalleResult", NS)
-        if result is None:
-            result = body.find(".//{http://tempuri.org/}getVotacion_DetalleResult")
-
-        if result is None:
-            return None
+        # API returns <Votacion xmlns="http://tempuri.org/"> directly (no SOAP envelope)
+        votacion = root
 
         # Parse vote-level metadata
-        votacion = result.find("Votacion")
-        if votacion is None:
-            return None
-
         meta = {
             "vote_id": vote_id,
-            "descripcion": votacion.findtext("Descripcion", "").strip(),
-            "fecha": votacion.findtext("Fecha", "").strip(),
-            "total_si": votacion.findtext("TotalSi", "0").strip(),
-            "total_no": votacion.findtext("TotalNo", "0").strip(),
-            "total_abstencion": votacion.findtext("TotalAbstencion", "0").strip(),
-            "total_dispensado": votacion.findtext("TotalDispensado", "0").strip(),
-            "tipo": votacion.findtext("Tipo/Valor", "").strip(),
-            "resultado": votacion.findtext("Resultado/Valor", "").strip(),
-            "quorum": votacion.findtext("Quorum/Valor", "").strip(),
+            "fecha": votacion.findtext("temp:Fecha", "", NS).strip(),
+            "tipo": votacion.findtext("temp:Tipo", "", NS).strip(),
+            "resultado": votacion.findtext("temp:Resultado", "", NS).strip(),
+            "quorum": votacion.findtext("temp:Quorum", "", NS).strip(),
+            "articulo": votacion.findtext("temp:Articulo", "", NS).strip(),
+            "boletin": votacion.findtext("temp:Boletin", "", NS).strip(),
+            "tramite": votacion.findtext("temp:Tramite", "", NS).strip(),
+            "informe": votacion.findtext("temp:Informe", "", NS).strip(),
+            "total_si": votacion.findtext("temp:TotalAfirmativos", "0", NS).strip(),
+            "total_no": votacion.findtext("temp:TotalNegativos", "0", NS).strip(),
+            "total_abstencion": votacion.findtext("temp:TotalAbstenciones", "0", NS).strip(),
+            "total_dispensado": votacion.findtext("temp:TotalDispensados", "0", NS).strip(),
         }
 
         # Parse individual deputy votes
         deputy_votes = []
-        votos_elem = votacion.find("Votos")
+        votos_elem = votacion.find("temp:Votos", NS)
         if votos_elem is not None:
-            for voto in votos_elem.findall("Voto"):
-                diputado = voto.find("Diputado")
+            for voto in votos_elem.findall("temp:Voto", NS):
+                diputado = voto.find("temp:Diputado", NS)
                 if diputado is not None:
+                    nombre = " ".join(filter(None, [
+                        diputado.findtext("temp:Nombre", "", NS).strip(),
+                        diputado.findtext("temp:Apellido_Paterno", "", NS).strip(),
+                        diputado.findtext("temp:Apellido_Materno", "", NS).strip(),
+                    ]))
                     deputy_votes.append({
                         "vote_id": vote_id,
-                        "dip_id": diputado.findtext("DIPID", "").strip(),
-                        "nombre": f"{diputado.findtext('Nombre', '').strip()} {diputado.findtext('Apellido_Paterno', '').strip()} {diputado.findtext('Apellido_Materno', '').strip()}".strip(),
-                        "sexo": diputado.findtext("Sexo", "").strip(),
-                        "region": diputado.findtext("Region", "").strip(),
-                        "distrito": diputado.findtext("Distrito", "").strip(),
-                        "militancia": diputado.findtext("Militancia_Actual", "").strip(),
-                        "correo": diputado.findtext("Correo_Electronico", "").strip(),
-                        "voto": voto.findtext("Opcion", "").strip(),
+                        "dip_id": diputado.findtext("temp:DIPID", "", NS).strip(),
+                        "nombre": nombre,
+                        "voto": voto.findtext("temp:Opcion", "", NS).strip(),
                     })
                 else:
                     # Some votes have Diputado1/Diputado2 structure (replacement voters)
-                    for key in ("Diputado1", "Diputado2"):
-                        dip = voto.find(key)
+                    for key in ("temp:Diputado1", "temp:Diputado2"):
+                        dip = voto.find(key, NS)
                         if dip is not None:
+                            nombre = " ".join(filter(None, [
+                                dip.findtext("temp:Nombre", "", NS).strip(),
+                                dip.findtext("temp:Apellido_Paterno", "", NS).strip(),
+                                dip.findtext("temp:Apellido_Materno", "", NS).strip(),
+                            ]))
                             deputy_votes.append({
                                 "vote_id": vote_id,
-                                "dip_id": dip.findtext("DIPID", "").strip(),
-                                "nombre": f"{dip.findtext('Nombre', '').strip()} {dip.findtext('Apellido_Paterno', '').strip()} {dip.findtext('Apellido_Materno', '').strip()}".strip(),
-                                "sexo": dip.findtext("Sexo", "").strip(),
-                                "region": dip.findtext("Region", "").strip(),
-                                "distrito": dip.findtext("Distrito", "").strip(),
-                                "militancia": dip.findtext("Militancia_Actual", "").strip(),
-                                "correo": dip.findtext("Correo_Electronico", "").strip(),
-                                "voto": voto.findtext("Opcion", "").strip(),
-                                "reemplaza_a": key,
+                                "dip_id": dip.findtext("temp:DIPID", "", NS).strip(),
+                                "nombre": nombre,
+                                "voto": voto.findtext("temp:Opcion", "", NS).strip(),
+                                "reemplaza_a": key.replace("temp:", ""),
                             })
 
         return {
@@ -204,7 +208,7 @@ def get_votacion_detail(vote_id: str) -> dict | None:
 def write_votes_csv(output_dir: str, votes: list[dict], mode: str = "a"):
     """Write/append vote metadata to CSV."""
     path = Path(output_dir) / "votes.csv"
-    fieldnames = ["id", "descripcion", "fecha", "bill_number"]
+    fieldnames = ["id", "fecha", "tipo", "resultado", "quorum", "articulo", "boletin", "bill_number", "tramite", "total_afirmativos", "total_negativos", "total_abstenciones", "total_dispensados"]
     write_header = not path.exists() or mode == "w"
 
     with open(path, mode, newline="", encoding="utf-8") as f:
@@ -212,7 +216,8 @@ def write_votes_csv(output_dir: str, votes: list[dict], mode: str = "a"):
         if write_header:
             writer.writeheader()
         for v in votes:
-            writer.writerow(v)
+            # Only write fields that exist in fieldnames
+            writer.writerow({k: v.get(k, "") for k in fieldnames})
 
 
 def write_deputies_csv(output_dir: str, deputy_votes: list[dict], mode: str = "a"):
@@ -220,7 +225,7 @@ def write_deputies_csv(output_dir: str, deputy_votes: list[dict], mode: str = "a
     path = Path(output_dir) / "deputy_votes.csv"
     if not deputy_votes:
         return
-    fieldnames = list(deputy_votes[0].keys())
+    fieldnames = ["vote_id", "dip_id", "nombre", "voto", "reemplaza_a"]
     write_header = not path.exists() or mode == "w"
 
     with open(path, mode, newline="", encoding="utf-8") as f:
@@ -228,7 +233,7 @@ def write_deputies_csv(output_dir: str, deputy_votes: list[dict], mode: str = "a
         if write_header:
             writer.writeheader()
         for dv in deputy_votes:
-            writer.writerow(dv)
+            writer.writerow({k: dv.get(k, "") for k in fieldnames})
 
 
 def write_vote_details_csv(output_dir: str, details: list[dict], mode: str = "a"):
@@ -236,7 +241,7 @@ def write_vote_details_csv(output_dir: str, details: list[dict], mode: str = "a"
     path = Path(output_dir) / "vote_details.csv"
     if not details:
         return
-    fieldnames = list(details[0].keys())
+    fieldnames = ["vote_id", "fecha", "tipo", "resultado", "quorum", "articulo", "boletin", "tramite", "informe", "total_si", "total_no", "total_abstencion", "total_dispensado"]
     write_header = not path.exists() or mode == "w"
 
     with open(path, mode, newline="", encoding="utf-8") as f:
@@ -244,7 +249,7 @@ def write_vote_details_csv(output_dir: str, details: list[dict], mode: str = "a"
         if write_header:
             writer.writeheader()
         for d in details:
-            writer.writerow(d)
+            writer.writerow({k: d.get(k, "") for k in fieldnames})
 
 
 # ---------------------------------------------------------------------------
