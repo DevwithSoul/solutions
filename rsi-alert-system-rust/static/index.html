@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RSI Alert System — Crypto RSI Monitor</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --card: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --red: #f85149;
+    --orange: #d29922;
+    --blue: #58a6ff;
+    --accent: #2ea043;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+    min-height: 100vh;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+
+  /* Header */
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px; padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 22px; font-weight: 600; }
+  header .status {
+    font-size: 13px; color: var(--muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.online { background: var(--green); }
+  .dot.offline { background: var(--red); }
+
+  /* Toast */
+  .toast-container {
+    position: fixed; bottom: 24px; right: 24px; z-index: 999;
+    display: flex; flex-direction: column; gap: 8px; max-width: 400px;
+  }
+  .toast {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; font-size: 13px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    animation: toastIn 0.3s ease; display: flex; align-items: center; gap: 10px;
+  }
+  .toast.success { border-left: 3px solid var(--green); }
+  .toast.info { border-left: 3px solid var(--blue); }
+  .toast.warn { border-left: 3px solid var(--orange); }
+  .toast .spinner {
+    width: 14px; height: 14px; border: 2px solid var(--muted);
+    border-top-color: var(--blue); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Coin Cards */
+  .cards { display: grid; gap: 8px; margin-bottom: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    position: relative; overflow: hidden; transition: opacity 0.3s;
+  }
+  .card::before {
+    content: ''; position: absolute; left: 0; top: 0;
+    width: 4px; height: 100%;
+  }
+  .card.normal::before { background: var(--green); }
+  .card.overbought::before { background: var(--red); }
+  .card.oversold::before { background: var(--blue); }
+  .card.loading::before { background: var(--muted); }
+  .card.loading { opacity: 0.6; }
+  .card.adding {
+    opacity: 0.6; animation: pulse 1.5s ease-in-out infinite;
+  }
+  .card.adding::before { background: var(--blue); }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+
+  .card-left { display: flex; flex-direction: column; gap: 1px; }
+  .card-symbol { font-size: 14px; font-weight: 600; }
+  .card-price { font-size: 11px; color: var(--muted); }
+  .card-price span { color: var(--text); }
+
+  .card-right { text-align: right; }
+  .card-rsi { font-size: 22px; font-weight: 700; line-height: 1; }
+  .card-rsi.normal { color: var(--green); }
+  .card-rsi.overbought { color: var(--red); }
+  .card-rsi.oversold { color: var(--blue); }
+  .card-status { font-size: 10px; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card-status.normal { color: var(--green); }
+  .card-status.overbought { color: var(--red); }
+  .card-status.oversold { color: var(--blue); }
+  .card-status.loading { color: var(--muted); }
+
+  /* Controls */
+  .controls {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 20px 24px; margin-bottom: 16px;
+  }
+  .controls h2 { font-size: 15px; font-weight: 600; margin-bottom: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .controls-grid { grid-template-columns: 1fr; } }
+  .control-group { display: flex; flex-direction: column; gap: 4px; }
+  .control-group label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .control-group input, .control-group select {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    color: var(--text); padding: 8px 10px; font-size: 14px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .control-group input:focus, .control-group select:focus { border-color: var(--blue); }
+  .control-group input[type="number"] { width: 100%; }
+
+  .add-coin-row { display: flex; gap: 8px; margin-top: 14px; }
+  .add-coin-row input { flex: 1; }
+  .add-coin-row button, .controls button {
+    background: var(--accent); border: none; border-radius: 6px;
+    color: white; padding: 8px 16px; font-size: 13px; font-weight: 500;
+    cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+  }
+  .add-coin-row button:hover, .controls button:hover { opacity: 0.85; }
+  .add-coin-row button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-remove {
+    background: transparent !important; border: 1px solid var(--border) !important;
+    color: var(--muted) !important; padding: 4px 8px !important; font-size: 11px !important;
+    margin-left: 8px;
+  }
+  .btn-remove:hover { border-color: var(--red) !important; color: var(--red) !important; }
+
+  .tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; min-height: 28px; }
+  .tag {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
+    padding: 4px 10px; font-size: 12px; display: flex; align-items: center; gap: 6px;
+  }
+
+  .toggle-row { display: flex; gap: 20px; margin-top: 14px; flex-wrap: wrap; }
+  .toggle-row label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+  .toggle-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .notif-hint {
+    font-size: 11px; color: var(--muted); margin-left: 24px; margin-top: 2px;
+  }
+  .notif-hint.granted { color: var(--green); }
+  .notif-hint.denied { color: var(--red); }
+
+  /* Alert Banner */
+  .alert-banner {
+    background: #3a1f1f; border: 1px solid var(--red); border-radius: 8px;
+    padding: 12px 16px; margin-bottom: 12px; display: none;
+    align-items: center; gap: 12px; animation: slideIn 0.3s ease;
+  }
+  .alert-banner.show { display: flex; }
+  .alert-banner .alert-icon { font-size: 20px; }
+  .alert-banner .alert-text { flex: 1; font-size: 14px; }
+  .alert-banner .alert-close {
+    background: none; border: none; color: var(--muted);
+    font-size: 18px; cursor: pointer; padding: 4px;
+  }
+  @keyframes slideIn { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* Affiliate Banner */
+  .affiliate-banner {
+    background: linear-gradient(135deg, #1a2332 0%, #162032 100%);
+    border: 1px solid var(--blue); border-radius: 8px;
+    padding: 10px 16px; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px;
+  }
+  .affiliate-banner a {
+    color: var(--blue); text-decoration: none; font-weight: 500;
+  }
+  .affiliate-banner a:hover { text-decoration: underline; }
+  .affiliate-banner .badge {
+    background: var(--blue); color: #fff; border-radius: 4px;
+    padding: 2px 8px; font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+
+  .no-coins { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>RSI Monitor</h1>
+    <div class="status">
+      <span class="dot online" id="statusDot"></span>
+      <span id="statusText">Connected</span>
+    </div>
+  </header>
+
+  <!-- Alert Banner -->
+  <div class="alert-banner" id="alertBanner">
+    <span class="alert-icon">&#9888;</span>
+    <span class="alert-text" id="alertText"></span>
+    <button class="alert-close" onclick="dismissAlert()">&times;</button>
+  </div>
+
+  <!-- Affiliate Banner -->
+  <div class="affiliate-banner">
+    <span class="badge">4% OFF</span>
+    <span>Get <strong>4% bonus trading fee rebate</strong> — Lifetime! &nbsp;<a href="https://app.hyperliquid.xyz/join/BONUS500" target="_blank" rel="noopener noreferrer">Claim your rebate &#8594;</a></span>
+  </div>
+
+  <!-- Coin Cards -->
+  <div id="noCoins" class="no-coins" style="display:none">
+    No coins tracked yet. Add one below to start monitoring RSI.
+  </div>
+  <div class="cards" id="cards"></div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <h2>Settings</h2>
+    <div class="controls-grid">
+      <div class="control-group">
+        <label>RSI Period</label>
+        <input type="number" id="rsiPeriod" min="2" max="50" value="14">
+      </div>
+      <div class="control-group">
+        <label>Candle Interval</label>
+        <select id="interval">
+          <option value="1m">1 minute</option>
+          <option value="5m">5 minutes</option>
+          <option value="15m">15 minutes</option>
+          <option value="30m">30 minutes</option>
+          <option value="1h" selected>1 hour</option>
+          <option value="4h">4 hours</option>
+          <option value="1d">1 day</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Overbought Alert &gt;</label>
+        <input type="number" id="overboughtThreshold" min="50" max="100" value="70" step="1">
+      </div>
+      <div class="control-group">
+        <label>Oversold Alert &lt;</label>
+        <input type="number" id="oversoldThreshold" min="0" max="50" value="30" step="1">
+      </div>
+      <div class="control-group">
+        <label>Check Interval (seconds)</label>
+        <input type="number" id="checkInterval" min="10" max="3600" value="60">
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <label><input type="checkbox" id="soundEnabled"> Sound Alerts</label>
+      <label><input type="checkbox" id="notificationsEnabled" onchange="onNotificationToggle()"> Desktop Notifications</label>
+    </div>
+    <div class="notif-hint" id="notifHint">&#9432; Click "Enable" when your browser asks for notification permission</div>
+
+    <div class="add-coin-row">
+      <input type="text" id="newCoinInput" placeholder="e.g. ETH, SOL, ADA, DOGE, LINK" value="">
+      <button id="addCoinBtn" onclick="addCoin()">Track Coin</button>
+    </div>
+    <div class="tag-list" id="coinTags"></div>
+
+    <div style="margin-top:14px">
+      <button onclick="saveConfig()" style="background:var(--blue)">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ── State ────────────────────────────────────────────────────────────────
+let coinData = {};
+let currentConfig = null;
+
+// ── Toast System ─────────────────────────────────────────────────────────
+function showToast(message, type, persistMs) {
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  if (type === 'info') {
+    el.innerHTML = '<span class="spinner"></span>' + escapeHtml(message);
+  } else {
+    el.innerHTML = escapeHtml(message);
+  }
+  container.appendChild(el);
+  const ms = persistMs || (type === 'info' ? 0 : 3500);
+  if (ms > 0) {
+    setTimeout(() => { if (el.parentNode) el.remove(); }, ms);
+  }
+  return el; // return element so caller can remove it
+}
+
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ── Audio ────────────────────────────────────────────────────────────────
+function playAlertSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.15, 0.3].forEach((delay, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.value = i === 1 ? 660 : 880;
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.2);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.2);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch(e) { /* audio not available */ }
+}
+
+// ── Notifications ────────────────────────────────────────────────────────
+function onNotificationToggle() {
+  const enabled = document.getElementById('notificationsEnabled').checked;
+  const hint = document.getElementById('notifHint');
+  if (!enabled) {
+    hint.textContent = '\u{1F6AB} Notifications disabled';
+    hint.className = 'notif-hint';
+    return;
+  }
+  if (!('Notification' in window)) {
+    hint.textContent = '\u{26A0} Notifications not supported in this browser';
+    hint.className = 'notif-hint';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    hint.textContent = '\u{2705} Notifications enabled';
+    hint.className = 'notif-hint granted';
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    hint.textContent = '\u{1F6AB} Notifications blocked by browser — allow them in site settings';
+    hint.className = 'notif-hint denied';
+    return;
+  }
+  // 'default' — request permission (user gesture context)
+  hint.textContent = '\u{1F4E8} Requesting permission...';
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      hint.textContent = '\u{2705} Notifications enabled';
+      hint.className = 'notif-hint granted';
+    } else if (perm === 'denied') {
+      hint.textContent = '\u{1F6AB} Notifications blocked — enable in browser site settings';
+      hint.className = 'notif-hint denied';
+    } else {
+      hint.textContent = '\u{1F4E8} Notification permission not granted (dismissed)';
+      hint.className = 'notif-hint';
+    }
+  });
+}
+
+function updateNotificationHint() {
+  const hint = document.getElementById('notifHint');
+  if (!('Notification' in window)) {
+    hint.textContent = '\u{26A0} Notifications not supported';
+    hint.className = 'notif-hint';
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    hint.textContent = '\u{2705} Notifications enabled';
+    hint.className = 'notif-hint granted';
+  } else if (Notification.permission === 'denied') {
+    hint.textContent = '\u{1F6AB} Notifications blocked by browser';
+    hint.className = 'notif-hint denied';
+  } else {
+    hint.textContent = '\u{1F4E8} Toggle the checkbox above to enable desktop alerts';
+    hint.className = 'notif-hint';
+  }
+}
+
+function sendNotification(title, body) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') {
+    new Notification(title, { body });
+  }
+}
+
+// ── Rendering ────────────────────────────────────────────────────────────
+function rsiStatus(rsi, overbought, oversold) {
+  if (rsi >= overbought) return 'overbought';
+  if (rsi <= oversold) return 'oversold';
+  return 'normal';
+}
+
+function renderCards() {
+  const container = document.getElementById('cards');
+  const noCoins = document.getElementById('noCoins');
+  let values = Object.values(coinData);
+
+  if (values.length === 0) {
+    container.innerHTML = '';
+    noCoins.style.display = 'block';
+    return;
+  }
+  noCoins.style.display = 'none';
+
+  const ob = currentConfig ? currentConfig.overbought_threshold : 70;
+  const os = currentConfig ? currentConfig.oversold_threshold : 30;
+
+  // Sort: overbought > oversold > loading > normal
+  // Alerting coins always float to the top
+  values.sort((a, b) => {
+    const prioA = a._loading ? 2 : a.rsi >= ob ? 0 : a.rsi <= os ? 1 : 3;
+    const prioB = b._loading ? 2 : b.rsi >= ob ? 0 : b.rsi <= os ? 1 : 3;
+    return prioA - prioB;
+  });
+
+  container.innerHTML = values.map(c => {
+    let status, rsiDisplay, priceDisplay, statusLabel, loadingText;
+
+    if (c._loading) {
+      // Coin is being added — show live status message
+      status = 'adding';
+      rsiDisplay = '\u23F3';
+      priceDisplay = '\u23F3';
+      statusLabel = c._status || 'Adding...';
+    } else if (c.rsi !== undefined && c.price) {
+      status = rsiStatus(c.rsi, ob, os);
+      rsiDisplay = c.rsi.toFixed(1);
+      priceDisplay = '$' + Number(c.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      statusLabel = status === 'overbought' ? 'Overbought' : status === 'oversold' ? 'Oversold' : 'Normal';
+    } else {
+      // Waiting for first data
+      status = 'loading';
+      rsiDisplay = '--';
+      priceDisplay = 'Awaiting data...';
+      statusLabel = 'Loading';
+    }
+
+    return `<div class="card ${status}" data-symbol="${c.symbol}">
+      <div class="card-left">
+        <div class="card-symbol"><a href="https://app.hyperliquid.xyz/trade/${c.display_name || c.symbol}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none">${c.display_name || c.symbol}</a></div>
+        <div class="card-price">${c.symbol} &middot; <span>${priceDisplay}</span></div>
+      </div>
+      <div class="card-right">
+        <div class="card-rsi ${status}">${rsiDisplay}</div>
+        <div class="card-status ${status}">${statusLabel}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCoinTags() {
+  const container = document.getElementById('coinTags');
+  if (!currentConfig) return;
+  container.innerHTML = currentConfig.coins.map(c =>
+    `<span class="tag">${c} <button class="btn-remove" onclick="removeCoin('${c}')">&times;</button></span>`
+  ).join('');
+}
+
+// ── API Calls ────────────────────────────────────────────────────────────
+async function fetchRsiData() {
+  try {
+    const res = await fetch('/api/rsi');
+    const data = await res.json();
+    data.forEach(d => { coinData[d.symbol] = d; });
+    renderCards();
+  } catch(e) { console.error('Fetch RSI:', e); }
+}
+
+async function fetchConfig() {
+  try {
+    const res = await fetch('/api/config');
+    currentConfig = await res.json();
+    applyConfigToForm();
+    renderCoinTags();
+  } catch(e) { console.error('Fetch config:', e); }
+}
+
+function applyConfigToForm() {
+  if (!currentConfig) return;
+  document.getElementById('rsiPeriod').value = currentConfig.rsi_period;
+  document.getElementById('interval').value = currentConfig.interval;
+  document.getElementById('overboughtThreshold').value = currentConfig.overbought_threshold;
+  document.getElementById('oversoldThreshold').value = currentConfig.oversold_threshold;
+  document.getElementById('checkInterval').value = currentConfig.check_interval_secs;
+  document.getElementById('soundEnabled').checked = currentConfig.sound_enabled;
+  document.getElementById('notificationsEnabled').checked = currentConfig.notifications_enabled;
+  updateNotificationHint();
+}
+
+async function saveConfig() {
+  const cfg = {
+    rsi_period: parseInt(document.getElementById('rsiPeriod').value) || 14,
+    interval: document.getElementById('interval').value,
+    overbought_threshold: parseFloat(document.getElementById('overboughtThreshold').value) || 70,
+    oversold_threshold: parseFloat(document.getElementById('oversoldThreshold').value) || 30,
+    check_interval_secs: parseInt(document.getElementById('checkInterval').value) || 60,
+    sound_enabled: document.getElementById('soundEnabled').checked,
+    notifications_enabled: document.getElementById('notificationsEnabled').checked,
+  };
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+    currentConfig = await res.json();
+    applyConfigToForm();
+    renderCoinTags();
+    renderCards();
+    showToast('Settings saved', 'success');
+  } catch(e) {
+    showToast('Failed to save settings', 'warn');
+    console.error('Save config:', e);
+  }
+}
+
+async function addCoin() {
+  const input = document.getElementById('newCoinInput');
+  const btn = document.getElementById('addCoinBtn');
+  let symbol = input.value.trim().toUpperCase();
+  if (!symbol) return;
+
+  // User-friendly: if they typed "BTC" or "ETH" without USDT, add it
+  if (!symbol.endsWith('USDT')) symbol += 'USDT';
+  if (!currentConfig) return;
+  if (currentConfig.coins.includes(symbol)) {
+    showToast(symbol + ' is already being tracked', 'warn');
+    input.value = '';
+    return;
+  }
+
+  // Disable button during add
+  btn.disabled = true;
+  const displayName = symbol.replace(/USDT$/, '');
+
+  // Step 1: Show toast + placeholder card immediately
+  const toastEl = showToast('Adding ' + displayName + '...', 'info', 0);
+  coinData[symbol] = {
+    symbol: symbol,
+    display_name: displayName,
+    _loading: true,
+    _status: 'Adding...',
+  };
+  renderCards();
+  renderCoinTags();
+
+  // Step 2: Update status
+  coinData[symbol]._status = 'Fetching price data...';
+  renderCards();
+
+  // Step 3: POST config to server
+  try {
+    const cfg = { coins: [...currentConfig.coins, symbol] };
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+    currentConfig = await res.json();
+
+    coinData[symbol]._status = 'Calculating RSI...';
+    renderCards();
+    renderCoinTags();
+
+    // Remove the toast — first SSE update will replace placeholder
+    if (toastEl.parentNode) toastEl.remove();
+    showToast(displayName + ' added — waiting for first RSI data...', 'info', 3000);
+  } catch(e) {
+    showToast('Failed to add ' + displayName, 'warn');
+    delete coinData[symbol];
+    renderCards();
+    renderCoinTags();
+    console.error('Add coin:', e);
+  } finally {
+    btn.disabled = false;
+    input.value = '';
+  }
+}
+
+async function removeCoin(symbol) {
+  if (!currentConfig) return;
+  const displayName = symbol.replace(/USDT$/, '');
+  const cfg = { coins: currentConfig.coins.filter(c => c !== symbol) };
+  try {
+    const res = await fetch('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+    currentConfig = await res.json();
+    delete coinData[symbol];
+    renderCoinTags();
+    renderCards();
+    showToast(displayName + ' removed', 'success');
+  } catch(e) {
+    showToast('Failed to remove ' + displayName, 'warn');
+    console.error('Remove coin:', e);
+  }
+}
+
+// ── Alert Handling ───────────────────────────────────────────────────────
+function showAlert(alertData) {
+  const banner = document.getElementById('alertBanner');
+  const text = document.getElementById('alertText');
+  text.textContent = alertData.message;
+  banner.classList.add('show');
+
+  if (currentConfig && currentConfig.sound_enabled) {
+    playAlertSound();
+  }
+
+  if (currentConfig && currentConfig.notifications_enabled) {
+    sendNotification('RSI Alert: ' + alertData.display_name, alertData.message);
+  }
+
+  clearTimeout(window._alertTimer);
+  window._alertTimer = setTimeout(dismissAlert, 8000);
+}
+
+function dismissAlert() {
+  document.getElementById('alertBanner').classList.remove('show');
+}
+
+// ── SSE Connection ───────────────────────────────────────────────────────
+function connectSSE() {
+  const evtSource = new EventSource('/events');
+
+  evtSource.onopen = () => {
+    document.getElementById('statusDot').className = 'dot online';
+    document.getElementById('statusText').textContent = 'Connected';
+  };
+
+  evtSource.onmessage = (event) => {
+    if (event.data === 'ping') return;
+    try {
+      const msg = JSON.parse(event.data);
+
+      if (msg.type === 'snapshot') {
+        msg.data.forEach(d => { coinData[d.symbol] = d; });
+        renderCards();
+        return;
+      }
+
+      if (msg.type === 'update') {
+        const d = msg.data;
+        // Replace any loading placeholder with real data
+        coinData[d.symbol] = d;
+        renderCards();
+        return;
+      }
+
+      if (msg.type === 'alert') {
+        const d = msg.data;
+        coinData[d.symbol] = {
+          symbol: d.symbol,
+          display_name: d.display_name,
+          rsi: d.rsi,
+          price: d.price,
+          timestamp: d.timestamp,
+          alert: d.alert_type,
+        };
+        renderCards();
+        showAlert(d);
+        return;
+      }
+    } catch(e) { /* ignore parse errors */ }
+  };
+
+  evtSource.onerror = () => {
+    document.getElementById('statusDot').className = 'dot offline';
+    document.getElementById('statusText').textContent = 'Disconnected (reconnecting...)';
+  };
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────
+async function init() {
+  await fetchConfig();
+  await fetchRsiData();
+  connectSSE();
+  // Update notification hint based on current state (no auto-request)
+  updateNotificationHint();
+}
+
+init();
+</script>
+</body>
+</html>

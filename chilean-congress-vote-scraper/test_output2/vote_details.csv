@@ -1,0 +1,94 @@
+vote_id,fecha,tipo,resultado,quorum,articulo,boletin,tramite,informe,total_si,total_no,total_abstencion,total_dispensado
+17495,2012-12-12T14:41:03,Única,Rechazado,2/3 Presentes,Insistencia texto aprobado por el Congreso Nacional objeto de observación 5,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,60,46,0,0
+17496,2012-12-12T14:40:36,Única,Rechazado,Quorum Simple,Observación 5 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,46,59,1,0
+17497,2012-12-12T14:39:12,Única,Rechazado,2/3 Presentes,Insistencia texto aprobado por el Congreso Nacional objeto de la observación 4,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,59,45,2,0
+17498,2012-12-12T14:38:42,Única,Rechazado,Quorum Simple,Observación 4 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,46,57,1,0
+17499,2012-12-12T14:37:51,Única,Rechazado,2/3 Presentes,Insistencia en el texto aprobado por el Congreso Nacional objeto de la observación 3,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,59,44,2,0
+17500,2012-12-12T14:37:07,Única,Rechazado,Quorum Simple,Observación 3 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,44,59,1,0
+17501,2012-12-12T14:35:59,Única,Aprobado,Quorum Simple,Observación 2 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,108,0,0,0
+17502,2012-12-12T14:34:08,Única,Rechazado,2/3 Presentes,Insistencia respecto del texto aprobado por el Congreso Nacional y objeto de la observación 1,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,58,48,1,0
+17503,2012-12-12T14:32:44,Única,Rechazado,Quorum Simple,Observación 1 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,48,58,1,0
+17469,2012-11-26T19:19:12,Única,Aprobado,Quorum Simple,Resto del articulado,8575-05,TERCER TRÁMITE,SIN INFORME,87,1,5,0
+17470,2012-11-26T19:18:40,Única,Aprobado,Quorum Simple,Artículo 25,8575-05,TERCER TRÁMITE,SIN INFORME,88,2,3,0
+17485,2012-11-26T19:18:09,Única,Aprobado,Quorum Calificado (Qc Y Loc),Artículo 3° que se repone,8575-05,TERCER TRÁMITE,SIN INFORME,89,1,4,0
+17471,2012-11-26T19:16:50,Única,Aprobado,Quorum Simple,Enmiendas Partida 50,8575-05,TERCER TRÁMITE,SIN INFORME,87,3,3,0
+17472,2012-11-26T19:16:19,Única,Aprobado,Quorum Simple,Enmiendas Partida 21,8575-05,TERCER TRÁMITE,SIN INFORME,85,5,3,0
+17486,2012-11-26T19:15:42,Única,Aprobado,Quorum Simple,Enmiendas Partida 19,8575-05,TERCER TRÁMITE,SIN INFORME,82,6,3,0
+17473,2012-11-26T19:15:21,Única,Aprobado,Quorum Simple,"Partida 19, glosa 06, capítulo 01, programa 06, subtítulo 24, ítem 01, asignación 512",8575-05,TERCER TRÁMITE,SIN INFORME,54,32,4,0
+17474,2012-11-26T19:14:44,Única,Aprobado,Quorum Simple,Enmiendas Partida 18,8575-05,TERCER TRÁMITE,SIN INFORME,77,7,8,0
+17475,2012-11-26T19:14:19,Única,Aprobado,Quorum Simple,Enmiendas a la Partida 17,8575-05,TERCER TRÁMITE,SIN INFORME,85,7,1,0
+17487,2012-11-26T19:13:50,Única,Aprobado,Quorum Simple,Resto de las enmiendas a la Partida 16,8575-05,TERCER TRÁMITE,SIN INFORME,82,7,3,0
+17476,2012-11-26T19:13:07,Única,Rechazado,Quorum Simple,"Partida 16, capítulo 09, programa 01, subtítulo 21, ítem 004, glosa 05, inciso segundo",8575-05,TERCER TRÁMITE,SIN INFORME,42,47,4,0
+17477,2012-11-26T19:11:22,Única,Aprobado,Quorum Simple,Enmiendas Partida 15,8575-05,TERCER TRÁMITE,SIN INFORME,74,9,10,0
+17478,2012-11-26T19:10:49,Única,Aprobado,Quorum Simple,Enmiendas Partida 13,8575-05,TERCER TRÁMITE,SIN INFORME,85,6,3,0
+17488,2012-11-26T19:10:09,Única,Aprobado,Quorum Simple,Enmiendas Partida 10,8575-05,TERCER TRÁMITE,SIN INFORME,87,2,2,0
+17495,2012-12-12T14:41:03,Única,Rechazado,2/3 Presentes,Insistencia texto aprobado por el Congreso Nacional objeto de observación 5,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,60,46,0,0
+17496,2012-12-12T14:40:36,Única,Rechazado,Quorum Simple,Observación 5 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,46,59,1,0
+17497,2012-12-12T14:39:12,Única,Rechazado,2/3 Presentes,Insistencia texto aprobado por el Congreso Nacional objeto de la observación 4,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,59,45,2,0
+17498,2012-12-12T14:38:42,Única,Rechazado,Quorum Simple,Observación 4 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,46,57,1,0
+17499,2012-12-12T14:37:51,Única,Rechazado,2/3 Presentes,Insistencia en el texto aprobado por el Congreso Nacional objeto de la observación 3,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,59,44,2,0
+17500,2012-12-12T14:37:07,Única,Rechazado,Quorum Simple,Observación 3 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,44,59,1,0
+17501,2012-12-12T14:35:59,Única,Aprobado,Quorum Simple,Observación 2 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,108,0,0,0
+17502,2012-12-12T14:34:08,Única,Rechazado,2/3 Presentes,Insistencia respecto del texto aprobado por el Congreso Nacional y objeto de la observación 1,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,58,48,1,0
+17503,2012-12-12T14:32:44,Única,Rechazado,Quorum Simple,Observación 1 de S. E. el Presidente de la República,8575-05,OBSERVACIONES P. DE LA R.,INFORME OBSERVACIONES,48,58,1,0
+17469,2012-11-26T19:19:12,Única,Aprobado,Quorum Simple,Resto del articulado,8575-05,TERCER TRÁMITE,SIN INFORME,87,1,5,0
+17470,2012-11-26T19:18:40,Única,Aprobado,Quorum Simple,Artículo 25,8575-05,TERCER TRÁMITE,SIN INFORME,88,2,3,0
+17485,2012-11-26T19:18:09,Única,Aprobado,Quorum Calificado (Qc Y Loc),Artículo 3° que se repone,8575-05,TERCER TRÁMITE,SIN INFORME,89,1,4,0
+17471,2012-11-26T19:16:50,Única,Aprobado,Quorum Simple,Enmiendas Partida 50,8575-05,TERCER TRÁMITE,SIN INFORME,87,3,3,0
+17472,2012-11-26T19:16:19,Única,Aprobado,Quorum Simple,Enmiendas Partida 21,8575-05,TERCER TRÁMITE,SIN INFORME,85,5,3,0
+17486,2012-11-26T19:15:42,Única,Aprobado,Quorum Simple,Enmiendas Partida 19,8575-05,TERCER TRÁMITE,SIN INFORME,82,6,3,0
+17473,2012-11-26T19:15:21,Única,Aprobado,Quorum Simple,"Partida 19, glosa 06, capítulo 01, programa 06, subtítulo 24, ítem 01, asignación 512",8575-05,TERCER TRÁMITE,SIN INFORME,54,32,4,0
+17474,2012-11-26T19:14:44,Única,Aprobado,Quorum Simple,Enmiendas Partida 18,8575-05,TERCER TRÁMITE,SIN INFORME,77,7,8,0
+17475,2012-11-26T19:14:19,Única,Aprobado,Quorum Simple,Enmiendas a la Partida 17,8575-05,TERCER TRÁMITE,SIN INFORME,85,7,1,0
+17487,2012-11-26T19:13:50,Única,Aprobado,Quorum Simple,Resto de las enmiendas a la Partida 16,8575-05,TERCER TRÁMITE,SIN INFORME,82,7,3,0
+17476,2012-11-26T19:13:07,Única,Rechazado,Quorum Simple,"Partida 16, capítulo 09, programa 01, subtítulo 21, ítem 004, glosa 05, inciso segundo",8575-05,TERCER TRÁMITE,SIN INFORME,42,47,4,0
+17477,2012-11-26T19:11:22,Única,Aprobado,Quorum Simple,Enmiendas Partida 15,8575-05,TERCER TRÁMITE,SIN INFORME,74,9,10,0
+17478,2012-11-26T19:10:49,Única,Aprobado,Quorum Simple,Enmiendas Partida 13,8575-05,TERCER TRÁMITE,SIN INFORME,85,6,3,0
+17488,2012-11-26T19:10:09,Única,Aprobado,Quorum Simple,Enmiendas Partida 10,8575-05,TERCER TRÁMITE,SIN INFORME,87,2,2,0
+17479,2012-11-26T19:09:45,Única,Aprobado,Quorum Simple,Resto de las enmiendas a la Partida 09,8575-05,TERCER TRÁMITE,SIN INFORME,81,8,4,0
+17480,2012-11-26T19:09:23,Única,Aprobado,Quorum Simple,"Partida 09, capítulo 11, programa 01, subtítulo 33, ítem 03, asignación 005, glosa 07",8575-05,TERCER TRÁMITE,SIN INFORME,85,3,4,0
+17489,2012-11-26T19:07:51,Única,Aprobado,Quorum Simple,"Partida 09, capítulo 09, programa 03, subtítulo 24, ítem 01, asignación 252",8575-05,TERCER TRÁMITE,SIN INFORME,78,6,5,0
+17481,2012-11-26T19:07:17,Única,Aprobado,Quorum Simple,"Partida 09, capítulo 01, programa 30, subtítulo 33, ítem 03, asignación 401",8575-05,TERCER TRÁMITE,SIN INFORME,63,23,7,0
+17482,2012-11-26T19:05:45,Única,Aprobado,Quorum Simple,"Partida 09, capítulo 01, programa 21",8575-05,TERCER TRÁMITE,SIN INFORME,73,15,5,0
+17484,2012-11-26T19:04:50,Única,Aprobado,Quorum Simple,"Partida 09, capítulo 01, programas 01, 02, 03, 04 y 11",8575-05,TERCER TRÁMITE,SIN INFORME,78,15,2,0
+17490,2012-11-26T19:04:08,Única,Aprobado,Quorum Simple,Enmiendas Partida 08,8575-05,TERCER TRÁMITE,SIN INFORME,91,2,1,0
+17493,2012-11-26T19:03:41,Única,Aprobado,Quorum Simple,Resto de las enmiendas Partida 07,8575-05,TERCER TRÁMITE,SIN INFORME,88,2,3,0
+17494,2012-11-26T19:03:21,Única,Aprobado,Quorum Simple,"Capítulo 06, Programa 01, Subtítulo 24, ítem 01, asignación 117, Glosa 14. Partida 07",8575-05,TERCER TRÁMITE,SIN INFORME,78,3,11,0
+17491,2012-11-26T19:02:27,Única,Aprobado,Quorum Simple,Enmiendas Partida 05,8575-05,TERCER TRÁMITE,SIN INFORME,85,2,6,0
+17492,2012-11-26T19:00:20,Única,Aprobado,Quorum Simple,Enmiendas introducidas Partida 02,8575-05,TERCER TRÁMITE,SIN INFORME,89,2,1,0
+17409,2012-11-21T14:06:05,Particular,Aprobado,Quorum Simple,Resto articulado,8575-05,PRIMER TRÁMITE,PRIMER INFORME,103,0,0,0
+17410,2012-11-21T14:04:29,Particular,Aprobado,Quorum Simple,INDICACIÓN 18 - ARTICULO 25,8575-05,PRIMER TRÁMITE,PRIMER INFORME,54,50,0,0
+17408,2012-11-21T14:03:22,Particular,Rechazado,Quorum Simple,Inadmisibilidad indicación 18 artículo 25 nuevo,8575-05,PRIMER TRÁMITE,PRIMER INFORME,50,51,0,0
+17411,2012-11-21T14:01:58,Particular,Aprobado,Quorum Simple,INDICACIÓN 16 - ARTICULO 17,8575-05,PRIMER TRÁMITE,PRIMER INFORME,104,0,0,0
+17412,2012-11-21T14:00:27,Particular,Aprobado,Quorum Simple,INDICACIÓN 12 - ARTICULO 12,8575-05,PRIMER TRÁMITE,PRIMER INFORME,100,0,0,0
+17413,2012-11-21T13:59:25,Particular,Aprobado,Quorum Simple,INDICACIÓN 9 - ARTICULO 12,8575-05,PRIMER TRÁMITE,PRIMER INFORME,97,0,0,0
+17414,2012-11-21T13:58:53,Particular,Aprobado,Quorum Simple,INDICACIÓN 8 - ARTICULO 12,8575-05,PRIMER TRÁMITE,PRIMER INFORME,97,2,0,0
+17415,2012-11-21T13:58:02,Particular,Aprobado,Quorum Simple,INDICACIÓN 7 - ARTICULO 11,8575-05,PRIMER TRÁMITE,PRIMER INFORME,50,52,0,0
+17441,2012-11-21T13:56:55,Particular,Aprobado,Quorum Simple,Indicación 4 artículo 11 nuevo,8575-05,PRIMER TRÁMITE,PRIMER INFORME,54,50,0,0
+17416,2012-11-21T13:56:20,Particular,Aprobado,Quorum Simple,INDICACIÓN 3 - ARTICULO 04,8575-05,PRIMER TRÁMITE,PRIMER INFORME,54,50,0,0
+17417,2012-11-21T13:55:44,Particular,Rechazado,Quorum Calificado (Qc Y Loc),INDICACIÓN 2 - ARTICULO 03,8575-05,PRIMER TRÁMITE,PRIMER INFORME,55,50,0,0
+17418,2012-11-21T13:53:04,Particular,Aprobado,Quorum Simple,RESTO DE LA PARTIDA - PARTIDA 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,95,1,2,0
+17419,2012-11-21T13:52:25,Particular,Aprobado,Quorum Simple,INDICACIÓN 16 - PARTIDA 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,56,39,1,0
+17420,2012-11-21T13:50:27,Particular,Aprobado,Quorum Simple,INDICACIÓN 13 - PARTIDA 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,50,51,1,0
+17442,2012-11-21T13:49:58,Particular,Rechazado,Quorum Simple,Inadmisibilidad indicación 13 Partida 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,10,89,1,0
+17443,2012-11-21T13:44:52,Particular,Aprobado,Quorum Simple,Inadmisibilidad indicaciones 10 y 11 Partida 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,49,43,0,0
+17421,2012-11-21T13:43:33,Particular,Aprobado,Quorum Simple,,8575-05,PRIMER TRÁMITE,PRIMER INFORME,50,44,0,0
+17422,2012-11-21T13:40:47,Particular,Aprobado,Quorum Simple,INDICACIÓN 6 - PARTIDA 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,55,30,3,0
+17444,2012-11-21T13:40:12,Particular,Rechazado,Quorum Simple,Inadmisibilidad indicación 6 Partida 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,46,52,1,0
+17423,2012-11-21T13:37:13,Particular,Aprobado,Quorum Simple,INDICACIÓN 3 - PARTIDA 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,73,23,2,0
+17445,2012-11-21T13:36:39,Particular,Rechazado,Quorum Simple,Inadmisibilidad indicación 3 Partida 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,48,53,0,0
+17424,2012-11-21T13:35:07,Particular,Aprobado,Quorum Simple,INDICACIÓN 2 - PARTIDA 50,8575-05,PRIMER TRÁMITE,PRIMER INFORME,53,51,0,0
+17425,2012-11-21T13:33:57,Particular,Aprobado,Quorum Simple,RESTO DE LA PARTIDA - PARTIDA 25,8575-05,PRIMER TRÁMITE,PRIMER INFORME,102,1,0,0
+17426,2012-11-21T13:33:28,Particular,Aprobado,Quorum Simple,INDICACIÓN 1 - PARTIDA 25,8575-05,PRIMER TRÁMITE,PRIMER INFORME,104,2,0,0
+17427,2012-11-21T13:32:45,Particular,Aprobado,Quorum Simple,SIN INDICACION - PARTIDA 24,8575-05,PRIMER TRÁMITE,PRIMER INFORME,80,19,5,0
+17428,2012-11-21T13:32:03,Particular,Aprobado,Quorum Simple,INDICACIÓN 1 - PARTIDA 23,8575-05,PRIMER TRÁMITE,PRIMER INFORME,102,3,0,0
+17429,2012-11-21T13:30:36,Particular,Aprobado,Quorum Simple,RESTO DE LA PARTIDA - PARTIDA 20,8575-05,PRIMER TRÁMITE,PRIMER INFORME,87,5,5,0
+17430,2012-11-21T13:30:10,Particular,Aprobado,Quorum Simple,INDICACIÓN 4 - PARTIDA 20,8575-05,PRIMER TRÁMITE,PRIMER INFORME,63,39,1,0
+17431,2012-11-21T13:29:26,Particular,Aprobado,Quorum Simple,INDICACIÓN 2 - PARTIDA 20,8575-05,PRIMER TRÁMITE,PRIMER INFORME,58,45,0,0
+17432,2012-11-21T13:28:48,Particular,Aprobado,Quorum Simple,INDICACIÓN 1 - PARTIDA 20,8575-05,PRIMER TRÁMITE,PRIMER INFORME,57,50,0,0
+17433,2012-11-21T13:28:04,Particular,Aprobado,Quorum Simple,RESTO DE LA PARTIDA - PARTIDA 17,8575-05,PRIMER TRÁMITE,PRIMER INFORME,98,3,1,0
+17434,2012-11-21T13:27:40,Particular,Aprobado,Quorum Simple,INDICACIÓN 2 - PARTIDA 17,8575-05,PRIMER TRÁMITE,PRIMER INFORME,93,1,0,0
+17435,2012-11-21T13:27:15,Particular,Rechazado,Quorum Simple,INDICACIÓN 1 - PARTIDA 17,8575-05,PRIMER TRÁMITE,PRIMER INFORME,52,53,0,0
+17436,2012-11-21T13:26:32,Particular,Aprobado,Quorum Simple,RESTO DE LA PARTIDA - PARTIDA 15,8575-05,PRIMER TRÁMITE,PRIMER INFORME,93,0,0,0
+17437,2012-11-21T13:26:10,Particular,Aprobado,Quorum Simple,INDICACIÓN 4 - PARTIDA 15,8575-05,PRIMER TRÁMITE,PRIMER INFORME,72,13,2,0
+17438,2012-11-21T13:25:48,Particular,Aprobado,Quorum Simple,INDICACIÓN 3 - PARTIDA 15,8575-05,PRIMER TRÁMITE,PRIMER INFORME,76,12,4,0
